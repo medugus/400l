@@ -1,0 +1,1 @@
+(async()=>{app=document.getElementById('app');if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(e=>console.debug('SW unavailable',e))}window.addEventListener('online',()=>{if(S.session)render()});window.addEventListener('offline',()=>{if(S.session)render()});if(await restore())await load();else renderLogin()})();
