@@ -59,40 +59,45 @@ function canCreateExtraSession(){
 }
 
 function defaultExtraTimes(){
-  let d=new Date(),start=new Date(d.getTime());
-  start.setMinutes(Math.ceil(start.getMinutes()/15)*15,0,0);
-  let end=new Date(start.getTime()+60*60*1000);
+  let d=new Date(),mins=Math.ceil(d.getMinutes()/15)*15;
+  if(mins>=60){d.setHours(d.getHours()+1);mins=0}
+  d.setMinutes(mins,0,0);
+  let end=new Date(d.getTime()+60*60*1000);
   const f=x=>String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0');
-  return [f(start),f(end)];
+  return [f(d),f(end)];
 }
 
 function openExtraSessionDialog(){
   if(!canCreateExtraSession())return;
   let old=document.getElementById('extraClassDialog');if(old)old.remove();
   let [start,end]=defaultExtraTimes();
-  document.body.insertAdjacentHTML('beforeend',`<dialog id="extraClassDialog" class="extra-dialog"><form onsubmit="saveExtraSession(event)"><div class="extra-title">Add out-of-timetable class</div><div class="muted">${esc(courseLabel(S.staff.course))} · ${iso()}</div><div class="out-badge" style="margin-top:10px">OUT OF OFFICIAL TIMETABLE CLASS</div><label>Class type</label><select id="extraType" required><option>Lecture</option><option>Practical</option></select><div class="two-col"><div><label>Start</label><input id="extraStart" type="time" value="${start}" required></div><div><label>End</label><input id="extraEnd" type="time" value="${end}" required></div></div><label>Venue</label><input id="extraVenue" placeholder="Lecture theatre / laboratory"><label>Why is this class outside the official timetable?</label><textarea id="extraReason" minlength="5" required placeholder="e.g. replacement class, make-up lecture, rescheduled class"></textarea><div id="extraErr" class="errorline"></div><div class="dialog-actions"><button type="button" class="btn light" onclick="document.getElementById('extraClassDialog').close()">Cancel</button><button id="extraSave" class="btn primary">Create class</button></div></form></dialog>`);
+  document.body.insertAdjacentHTML('beforeend',`<dialog id="extraClassDialog" class="extra-dialog"><form onsubmit="saveExtraSession(event)"><div class="extra-title">Add out-of-timetable class</div><div class="muted">${esc(courseLabel(S.staff.course))}</div><div class="out-badge" style="margin-top:10px">OUT OF OFFICIAL TIMETABLE CLASS</div><label>Date</label><input id="extraDate" type="date" value="${iso()}" required><label>Class type</label><select id="extraType" required><option>Lecture</option><option>Practical</option><option>Revision</option><option>Seminar</option><option>Make-up class</option></select><div class="two-col"><div><label>Start</label><input id="extraStart" type="time" value="${start}" required></div><div><label>End</label><input id="extraEnd" type="time" value="${end}" required></div></div><label>Venue</label><input id="extraVenue" placeholder="Lecture theatre / laboratory"><label>Why is this class outside the official timetable?</label><textarea id="extraReason" minlength="5" required placeholder="e.g. replacement class, make-up lecture, rescheduled class"></textarea><div id="extraErr" class="errorline"></div><div class="dialog-actions"><button type="button" class="btn light" onclick="document.getElementById('extraClassDialog').close()">Cancel</button><button id="extraSave" class="btn primary">Create class</button></div></form></dialog>`);
   document.getElementById('extraClassDialog').showModal();
 }
 
 async function saveExtraSession(e){
   e.preventDefault();
   if(!navigator.onLine){document.getElementById('extraErr').textContent='You must be online to create an out-of-timetable class.';return}
-  let start=$('#extraStart').value,end=$('#extraEnd').value,reason=$('#extraReason').value.trim(),venue=$('#extraVenue').value.trim(),type=$('#extraType').value;
+  let date=$('#extraDate').value,start=$('#extraStart').value,end=$('#extraEnd').value,reason=$('#extraReason').value.trim(),venue=$('#extraVenue').value.trim(),type=$('#extraType').value;
   if(end<=start){$('#extraErr').textContent='End time must be after the start time.';return}
   let btn=$('#extraSave');btn.disabled=true;btn.textContent='Creating…';
   try{
-    let rows=await req('/rest/v1/extra_sessions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({created_by:S.session.user.id,created_by_name:S.staff.full_name,course:S.staff.course,session_date:iso(),start_time:start,end_time:end,session_type:type,venue:venue||null,reason,label:'OUT OF OFFICIAL TIMETABLE CLASS'})});
+    let rows=await req('/rest/v1/extra_sessions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({created_by:S.session.user.id,created_by_name:S.staff.full_name,course:S.staff.course,session_date:date,start_time:start,end_time:end,session_type:type,venue:venue||null,reason,label:'OUT OF OFFICIAL TIMETABLE CLASS'})});
     let row=Array.isArray(rows)?rows[0]:rows;if(!row)throw Error('Class was created but could not be loaded. Refresh and try again.');
-    let ses=mapExtraSession(row);S.extraSessions.push(ses);S.selected=ses.id;S.rollSession=ses.id;S.rollIndex=0;
+    let ses=mapExtraSession(row);S.extraSessions.push(ses);
     document.getElementById('extraClassDialog').close();
-    audit('extra_session_created',ses,null,null,null,{reason,start_time:start,end_time:end,venue,type,label:ses.label});
-    renderRoll();
+    audit('extra_session_created',ses,null,null,null,{reason,date,start_time:start,end_time:end,venue,type,label:ses.label});
+    if(date===iso()){
+      S.selected=ses.id;S.rollSession=ses.id;S.rollIndex=0;renderRoll();
+    }else{
+      alert('Extra class saved for '+date+'. It will appear in Roll call on that date.');
+    }
   }catch(err){$('#extraErr').textContent=err.message;btn.disabled=false;btn.textContent='Create class'}
 }
 
 function enhanceRoll(){
   let v=$('#view');if(!v)return;
-  if(canCreateExtraSession())v.insertAdjacentHTML('afterbegin',`<div class="card extra-create"><div><b>Need to teach outside the official timetable?</b><div class="muted">Create a clearly labelled replacement, make-up or rescheduled class. A reason is required and the action is audited.</div></div><button class="btn extra-btn" onclick="openExtraSessionDialog()">+ Add out-of-timetable class</button></div>`);
+  if(canCreateExtraSession())v.insertAdjacentHTML('afterbegin',`<div class="card extra-create"><div><b>Need to teach outside the official timetable?</b><div class="muted">Create a clearly labelled replacement, make-up, revision or rescheduled class. A reason is required and the action is audited.</div></div><button class="btn extra-btn" title="Create a class that is not in the official timetable; you must state why." onclick="openExtraSessionDialog()">+ Add out-of-timetable class</button></div>`);
   let ss=visibleSessions();
   [...v.querySelectorAll('.session')].forEach((el,i)=>{let s=ss[i];if(s?.outOfTimetable)el.insertAdjacentHTML('afterbegin','<div class="out-badge">OUT OF OFFICIAL TIMETABLE</div>')});
   let selected=ss.find(x=>x.id===S.selected);
@@ -131,7 +136,7 @@ async function cancelExtraSession(id){
 
 function extraAdminCard(){
   let rows=[...(S.extraSessions||[])].sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
-  return `<div class="card" id="extraSessionsAdmin"><b>Out-of-official-timetable classes</b><div class="muted" style="margin:4px 0 10px">Classes created by lecturers/HODs outside the submitted timetable. Reasons are retained for audit and reporting.</div>${rows.length?`<div class="scroll"><table class="table"><tr><th>Date</th><th>Course</th><th>Time</th><th>Type</th><th>Added by</th><th>Reason</th><th></th></tr>${rows.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(courseLabel(x.course))}</td><td>${esc(x.start)}–${esc(x.end)}</td><td>${esc(x.type)}</td><td>${esc(x.createdBy)}</td><td>${esc(x.reason)}</td><td><button class="btn light" onclick="cancelExtraSession('${esc(x.extraId)}')">Cancel</button></td></tr>`).join('')}</table></div>`:'<div class="muted">None created.</div>'}</div>`;
+  return `<div class="card" id="extraSessionsAdmin"><b>Out-of-official-timetable classes</b><div class="muted" style="margin:4px 0 10px">Classes created by lecturers/HODs outside the submitted timetable. Reasons are retained for audit and reporting.</div>${rows.length?`<div class="scroll"><table class="table"><tr><th>Date</th><th>Course</th><th>Time</th><th>Type</th><th>Added by</th><th>Reason</th><th></th></tr>${rows.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(courseLabel(x.course))}</td><td>${esc(x.start)}–${esc(x.end)}</td><td>${esc(x.type)}</td><td>${esc(x.createdBy)}</td><td>${esc(x.reason)}</td><td><button class="btn light" title="Cancel this extra class. Existing attendance remains in reports." onclick="cancelExtraSession('${esc(x.extraId)}')">Cancel</button></td></tr>`).join('')}</table></div>`:'<div class="muted">None created.</div>'}</div>`;
 }
 
 const _baseRenderAdmin=renderAdmin;
