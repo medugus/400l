@@ -13,9 +13,19 @@ async function loadAdminPanel(){
     let a=$('#staffAdmin');if(a)a.innerHTML='<div class="muted">Could not load staff access: '+esc(e.message)+'</div>';
   }
 }
+function copyStaffCode(code,name){
+  if(!code)return;
+  let text=String(code);
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(text).then(()=>alert((name?name+' · ':'')+'code copied')).catch(()=>prompt('Copy code',text));
+  }else prompt('Copy code',text)
+}
 function renderStaffAdmin(){
   let el=$('#staffAdmin');if(!el)return;
-  el.innerHTML=`<div class="top"><div><b>Staff access</b><div class="muted">Codes are visible only to College admins.</div></div><button class="btn light" onclick="downloadCodeTable()">Download code table</button></div><div class="scroll" style="margin-top:10px"><table class="table"><tr><th>Name</th><th>Department</th><th>Role</th><th>Code</th><th>Status</th><th>Actions</th></tr>${S.adminStaff.map(x=>`<tr class="${x.active?'':'staff-inactive'}"><td>${esc(x.full_name)}</td><td>${esc(x.department)}</td><td>${esc(x.role)}</td><td class="codebox">${esc(x.code_display||'—')}</td><td>${x.active?'Active':'Inactive'}</td><td><div class="admin-actions"><button class="btn light" onclick="resetStaffCode('${esc(x.login_key)}')">New code</button><button class="btn ${x.active?'danger':'green'}" onclick="toggleStaff('${esc(x.login_key)}',${!x.active})">${x.active?'Deactivate':'Activate'}</button></div></td></tr>`).join('')}</table></div>`
+  let me=S.adminStaff.find(x=>x.full_name===S.staff.full_name),myCode=me?.code_display||'—';
+  el.innerHTML=`<div class="top"><div><b>Staff access codes</b><div class="muted">Admin only. The table fills automatically when you open Admin.</div></div><button class="btn light" onclick="downloadCodeTable()">Download code table</button></div>
+  <div style="margin-top:10px;padding:12px;border:1px solid #c7d2fe;background:#eef2ff;border-radius:12px"><b>Your code: <span class="codebox">${esc(myCode)}</span></b> ${myCode!=='—'?`<button class="btn light" style="margin-left:8px" onclick="copyStaffCode('${esc(myCode)}','Your')">Copy</button>`:''}</div>
+  <div class="scroll" style="margin-top:10px"><table class="table"><tr><th>Name</th><th>Department</th><th>Role</th><th>Code</th><th>Status</th><th>Actions</th></tr>${S.adminStaff.map(x=>{let mine=x.full_name===S.staff.full_name;return `<tr class="${x.active?'':'staff-inactive'}" style="${mine?'background:#eef2ff':''}"><td>${esc(x.full_name)}${mine?' <span class="pill">YOU</span>':''}</td><td>${esc(x.department)}</td><td>${esc(x.role)}</td><td class="codebox"><b>${esc(x.code_display||'—')}</b></td><td>${x.active?'Active':'Inactive'}</td><td><div class="admin-actions">${x.code_display?`<button class="btn light" onclick="copyStaffCode('${esc(x.code_display)}','${esc(x.full_name)}')">Copy code</button>`:''}<button class="btn light" onclick="resetStaffCode('${esc(x.login_key)}')">New code</button><button class="btn ${x.active?'danger':'green'}" onclick="toggleStaff('${esc(x.login_key)}',${!x.active})">${x.active?'Deactivate':'Activate'}</button></div></td></tr>`}).join('')}</table></div>`
 }
 async function resetStaffCode(loginKey){
   if(!confirm('Generate a new 6-digit code for this staff member? Their old code will stop working immediately.'))return;
@@ -50,7 +60,7 @@ function renderAdmin(){
   let t=S.state.timetable||[],st=S.state.students||[],ex=S.state.schedule_exclusions||[];
   v.innerHTML=`<div class="card"><b>Admin overview</b><div class="muted" style="margin-top:5px">${st.length} students · ${t.length} recurring teaching blocks · ${ex.length} excluded self-study/break/exam dates.</div></div>
   <div class="card"><b>Academic timetable used for roll call</b><div class="muted" style="margin:5px 0 10px">Department/date/time blocks are based on the submitted 400-level schedule. Specific lecture topics are not required.</div><div class="scroll"><table class="table"><tr><th>Course</th><th>Day</th><th>Time</th><th>Type</th><th>Period</th></tr>${t.map(x=>`<tr><td>${esc(courseLabel(x.course))}</td><td>${days[x.day]}</td><td>${esc(x.start)}–${esc(x.end)}</td><td>${esc(x.type)}</td><td>${esc(x.validFrom||'')} – ${esc(x.validTo||'')}</td></tr>`).join('')}</table></div></div>
-  <div class="card" id="staffAdmin"><div class="muted">Loading staff access…</div></div>
+  <div class="card" id="staffAdmin"><div class="muted">Loading staff access codes…</div></div>
   <div class="card"><b>Audit trail</b><div class="muted">Marks, undo actions, restarts, code resets and account status changes.</div><div id="auditAdmin" class="scroll" style="margin-top:10px"><div class="muted">Loading audit trail…</div></div></div>
   <div class="card"><b>Student list</b><div class="scroll"><table class="table"><tr><th>Matric</th><th>Name</th></tr>${st.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td></tr>`).join('')}</table></div></div>`;
   loadAdminPanel();
