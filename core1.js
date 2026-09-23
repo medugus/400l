@@ -23,6 +23,8 @@ const STAFF=[
  {key:'charity',name:'Mrs Charity',department:'Anatomic Pathology & Forensic Medicine'},
  {key:'asalu',name:'Prof. Asalu Folorunsho Adedayo',department:'Pharmacology'},
  {key:'bassi',name:'Prof. Bassi',department:'Pharmacology'},
+ {key:'egua',name:'Prof. Egua',department:'Pharmacology'},
+ {key:'isaac',name:'Mr. Isaac',department:'Pharmacology'},
  {key:'zainab',name:'Mrs Zainab',department:'College Administration'},
  {key:'glory',name:'Mrs Glory',department:'College Administration'},
  {key:'anita',name:'Miss Anita',department:'College Administration'}
