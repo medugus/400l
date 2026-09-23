@@ -5,5 +5,5 @@
 .stat-amber{background:#fef3c7;color:#92400e;border-color:#fcd34d}
 .stat-red{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .dash-summary .stat div{font-size:12px;font-weight:700;margin-top:2px}
-.app-footer{text-align:center;color:#64748b;font-size:12px;padding:18px 8px 8px}
+.app-footer{text-align:center;color:#64748b;font-size:9px;padding:14px 8px 6px;opacity:.72}
 @media(max-width:640px){.dash-summary{grid-template-columns:1fr 1fr}.dash-summary .stat{padding:12px}.dash-summary .stat b{font-size:24px}}
