@@ -12,6 +12,24 @@ function reportData(){
   let extras=[['Date','Course','Time','Type','Venue','Added by','Reason','Label'],...(S.extraSessions||[]).map(x=>[x.date,courseLabel(x.course),`${x.start}-${x.end}`,x.type,x.venue||'',x.createdBy||'',x.reason||'',x.label||'OUT OF OFFICIAL TIMETABLE CLASS'])];
   return{Overview:ov,Students:list,'Attendance Matrix':matrix,'Student Rates':rates,'Course Summary':csum,'At Risk':risk,'Session Log':slog,'Detailed Marks':det,'Out-of-Timetable Classes':extras}
 }
-async function downloadAllReports(btn){let old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Preparing Excel…'}try{let r=await fetch(URL+'/functions/v1/export-attendance-xlsx',{method:'GET',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});if(!r.ok){let t=await r.text();throw Error(t||'Could not create Excel report')}let blob=await r.blob(),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`Nile_FBCS_RollCall_All_Reports_${iso()}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}catch(e){alert('Excel download failed: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
-async function dl(sheet,btn){let old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Preparing…'}try{let r=await fetch(URL+'/functions/v1/export-attendance-xlsx?sheet='+encodeURIComponent(sheet),{method:'GET',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});if(!r.ok){let t=await r.text();throw Error(t||'Could not create Excel report')}let blob=await r.blob(),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`Nile_FBCS_RollCall_${sheet.replace(/ /g,'_')}_${iso()}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}catch(e){alert('Excel download failed: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
+async function fetchExcelLink(sheet){
+  let endpoint=URL+'/functions/v1/export-attendance-xlsx'+(sheet?'?sheet='+encodeURIComponent(sheet):'');
+  let r=await fetch(endpoint,{method:'GET',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});
+  let type=r.headers.get('content-type')||'';
+  if(!r.ok){let t=await r.text();try{let j=JSON.parse(t);throw Error(j.error||t)}catch(e){if(e instanceof SyntaxError)throw Error(t||'Could not create Excel report');throw e}}
+  if(type.includes('application/json')){
+    let b=await r.json();if(!b.url)throw Error(b.error||'No download link returned');return b
+  }
+  let blob=await r.blob(),u=URL.createObjectURL(blob);
+  return{url:u,filename:`Nile_FBCS_RollCall_${sheet?sheet.replace(/ /g,'_'):'All_Reports'}_${iso()}.xlsx`,blobUrl:true}
+}
+function openExcelDownload(info){
+  if(!info?.url)throw Error('No download link returned');
+  if(info.blobUrl){
+    let a=document.createElement('a');a.href=info.url;a.download=info.filename||'Nile_FBCS_RollCall.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(info.url),30000);return;
+  }
+  window.location.assign(info.url);
+}
+async function downloadAllReports(btn){let old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Preparing Excel…'}try{let info=await fetchExcelLink(null);openExcelDownload(info)}catch(e){alert('Excel download failed: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
+async function dl(sheet,btn){let old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='Preparing…'}try{let info=await fetchExcelLink(sheet);openExcelDownload(info)}catch(e){alert('Excel download failed: '+e.message)}finally{if(btn){btn.disabled=false;btn.textContent=old}}}
 function renderSummary(){let v=$('#view'),{per}=calc(),th=S.state.settings?.threshold||75,risk=per.filter(x=>x.rate!=null&&x.rate<th);let names=Object.keys(reportData());v.innerHTML=`<div class="card"><b>Report downloads</b><div class="muted" style="margin-top:4px">All existing report downloads remain available. The combined workbook is generated on the server.</div><button class="btn green" style="margin-top:12px" onclick="downloadAllReports(this)">Download all Excel reports</button><div class="grid" style="margin-top:10px">${names.filter(x=>x!=='Overview').map(n=>`<button class="btn light" onclick="dl('${n}',this)">${n}</button>`).join('')}<button class="btn light" onclick="dl('Pathology Attendance',this)">Combined Pathology</button><button class="btn light" onclick="dl('Pharmacology & Therapeutics',this)">Pharmacology & Therapeutics</button></div></div>${renderPathologyAttendance()}<div class="card"><b>At risk below ${th}%</b><div style="margin-top:8px">${risk.length?risk.map(x=>`<div class="row"><span class="grow">${esc(x.name)}</span><b style="color:#e11d48">${x.rate}%</b></div>`).join(''):'<div class="muted">No students below threshold yet.</div>'}</div></div>`}
