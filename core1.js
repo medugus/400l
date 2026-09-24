@@ -17,7 +17,7 @@ const STAFF=[
  {key:'anetor',name:'Prof. John Anetor',department:'Chemical Pathology'},
  {key:'nneka',name:'Mrs Nneka',department:'Chemical Pathology'},
  {key:'ezike',name:'Prof. Ezike Kevin Nwabueze',department:'Anatomic Pathology & Forensic Medicine'},
- {key:'ofuntebi',name:'Dr. Ofuntebi',department:'Anatomic Pathology & Forensic Medicine'},
+ {key:'ofuntebi',name:'Dr. Oguntebi',department:'Anatomic Pathology & Forensic Medicine'},
  {key:'ike',name:'Dr. Ike',department:'Anatomic Pathology & Forensic Medicine'},
  {key:'shehu',name:'Prof. M.S. Shehu',department:'Anatomic Pathology & Forensic Medicine'},
  {key:'charity',name:'Mrs Charity',department:'Anatomic Pathology & Forensic Medicine'},
