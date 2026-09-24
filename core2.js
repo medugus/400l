@@ -40,8 +40,18 @@ async function audit(action,ses,studentId=null,oldStatus=null,newStatus=null,det
 function setRollSession(id){S.selected=id;S.rollSession=id;let ses=visibleSessions().find(x=>x.id===id);if(!ses){S.rollIndex=0;renderRoll();return}let r=roster(ses),rec=S.attendance[key(ses)]||{},first=r.findIndex(st=>!rec[st.id]);S.rollIndex=first>=0?first:0;renderRoll()}
 function gotoStudent(delta){let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses)return;let r=roster(ses);S.rollIndex=Math.max(0,Math.min(r.length,S.rollIndex+delta));renderRoll()}
 function reviewUnmarked(){let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses)return;let r=roster(ses),rec=S.attendance[key(ses)]||{},i=r.findIndex(st=>!rec[st.id]);S.rollIndex=i>=0?i:0;renderRoll()}
+function blockRegisterKeys(ses){
+  if(!ses)return[];
+  let base=ses.baseSessionId||ses.id,today=iso(),keys=[];
+  let k1=today+'__'+base;if(S.attendance[k1])keys.push(k1);
+  for(let n=2;n<=4;n++){let k=today+'__'+base+'__L'+n;if(S.attendance[k])keys.push(k)}
+  return keys;
+}
+function blockIsFinalized(ses){
+  return blockRegisterKeys(ses).some(k=>S.attendance[k]?.__meta?.coverageFinalized===true)
+}
 function nextLectureNumber(ses){
-  if(!ses||String(ses.type||'').toLowerCase()!=='lecture')return null;
+  if(!ses||String(ses.type||'').toLowerCase()!=='lecture'||blockIsFinalized(ses))return null;
   let base=ses.baseSessionId||ses.id,today=iso(),used=new Set([1]);
   for(let n=2;n<=4;n++){
     if(S.attendance[today+'__'+base+'__L'+n]||S.multiSessions?.[base+'__L'+n])used.add(n);
@@ -57,4 +67,29 @@ function startAnotherLecture(){
   let base=ses.baseSessionId||ses.id,id=base+'__L'+n;
   S.multiSessions=S.multiSessions||{};S.multiSessions[id]={lecturer};
   S.selected=id;S.rollSession=id;S.rollIndex=0;S.undo=null;renderRoll();
+}
+
+function lectureWeight(rec){let w=Number(rec?.__meta?.lectureWeight||1);return Number.isFinite(w)&&w>0?w:1}
+async function finalizeLectureBlock(){
+  let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses||String(ses.type||'').toLowerCase()!=='lecture')return;
+  let keys=blockRegisterKeys(ses),count=keys.length;
+  if(![1,2,4].includes(count)){
+    alert(count===3?'Three attendance checks have been recorded. Please either take the fourth roll call before finalising, or contact Admin if one register was created in error.':'No completed lecture register is available to finalise.');
+    return;
+  }
+  let weight=4/count;
+  let wording=count===1?'1 attendance check → counts as all 4 lectures':count===2?'2 attendance checks → each counts as 2 lectures':'4 attendance checks → each counts as 1 lecture';
+  if(!confirm('Finish this 4-lecture block?\n\n'+wording+'\n\nThis weighting will be used in attendance percentages and reports.'))return;
+  try{
+    await saveChain;
+    for(let k of keys){
+      let rec={...(S.attendance[k]||{})};
+      rec.__meta={...(rec.__meta||{}),lectureWeight:weight,blockRollCalls:count,blockLectureEquivalents:4,coverageFinalized:true,coverageFinalizedBy:S.staff.full_name,coverageFinalizedAt:new Date().toISOString()};
+      S.attendance[k]=rec;
+      await req('/rest/v1/attendance_sessions?session_key=eq.'+encodeURIComponent(k),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({data:rec,updated_at:new Date().toISOString()})});
+    }
+    await audit('block_finalize',ses,null,null,null,{roll_calls:count,lecture_equivalents:4,weight_per_register:weight,session_keys:keys});
+    alert('Block finalised: '+wording+'.');
+    renderRoll();
+  }catch(e){alert('Could not finalise lecture block: '+e.message)}
 }
