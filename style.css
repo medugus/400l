@@ -7,3 +7,11 @@
 .dash-summary .stat div{font-size:12px;font-weight:700;margin-top:2px}
 .app-footer{text-align:center;color:#64748b;font-size:9px;padding:14px 8px 6px;opacity:.72}
 @media(max-width:640px){.dash-summary{grid-template-columns:1fr 1fr}.dash-summary .stat{padding:12px}.dash-summary .stat b{font-size:24px}}
+
+.qr-card{border-color:#c7d2fe;background:linear-gradient(180deg,#fff,#f8fafc)}
+.qr-layout{display:grid;grid-template-columns:minmax(250px,300px) 1fr;gap:22px;align-items:center;margin-top:14px}
+.qr-box{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;display:flex;align-items:center;justify-content:center;min-height:276px}
+.qr-box img,.qr-box canvas{max-width:250px!important;width:100%!important;height:auto!important}
+.qr-timer{font-size:32px;font-weight:850;font-variant-numeric:tabular-nums;color:#4338ca}
+.qr-count{font-size:24px;font-weight:800;color:#0f172a}
+@media(max-width:640px){.qr-layout{grid-template-columns:1fr}.qr-box{max-width:300px;margin:auto}.qr-timer{font-size:27px}}
