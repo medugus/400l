@@ -29,7 +29,7 @@ const STAFF=[
  {key:'glory',name:'Mrs Glory',department:'College Administration'},
  {key:'anita',name:'Miss Anita',department:'College Administration'}
 ];
-let S={session:null,staff:null,state:{},attendance:{},tab:'roll',selected:null,rollIndex:0,rollSession:null,undo:null,pathView:'Microbiology',adminStaff:[],adminAudit:[]};
+let S={session:null,staff:null,state:{},attendance:{},tab:'home',selected:null,rollIndex:0,rollSession:null,undo:null,pathView:'Microbiology',adminStaff:[],adminAudit:[]};
 let saveChain=Promise.resolve();
 let installPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
