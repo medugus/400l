@@ -5,52 +5,128 @@ function pathologyFinalRows(){let students=S.state.students||[];let byCourse=Obj
 function pctBadge(rate){let b=bandForRate(rate);return`<span class="pctdot ${b.pct}">${rate==null?'—':rate+'%'}</span>`}
 function renderPathologyAttendance(){let view=S.pathView||'Microbiology',labels=[['Microbiology','Micro','Microbiology cumulative attendance'],['Histopathology','Histo','Anatomic Pathology / Histopathology cumulative attendance'],['Chemical Pathology','Chem','Chemical Pathology cumulative attendance'],['Haematology','Haem','Haematology & Blood Transfusion cumulative attendance'],['Final','Combined Pathology','Pooled attendance across Microbiology, Histopathology, Chemical Pathology and Haematology'],['Pharmacology','Pharmacology & Therapeutics','Pharmacology & Therapeutics attendance; not included in Combined Pathology']];let tabs=`<div class="subtabs">${labels.map(([k,l,t])=>`<button title="${esc(t)}" class="btn light ${view===k?'active':''}" onclick="S.pathView='${k}';renderSummary()">${l}</button>`).join('')}</div>`;if(view==='Final'){let rows=pathologyFinalRows();return`<div class="card"><b>Department Attendance</b><div class="muted"><b>Combined Pathology</b> pools Microbiology + Histopathology + Chemical Pathology + Haematology. Pharmacology & Therapeutics is reported separately and is not included.</div>${tabs}<div class="report-table-wrap"><table class="table"><tr><th>Matric</th><th>Student</th><th>Micro</th><th>Histo</th><th>Chem</th><th>Haem</th><th>Combined Pathology</th><th>Attended / marked</th></tr>${rows.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${pctBadge(x.micro)}</td><td>${pctBadge(x.histo)}</td><td>${pctBadge(x.chem)}</td><td>${pctBadge(x.haem)}</td><td>${pctBadge(x.final)}</td><td>${x.a}/${x.n}</td></tr>`).join('')}</table></div></div>`}let rows=courseAttendanceStats([view]);let title=view==='Pharmacology'?'Pharmacology & Therapeutics Attendance':view+' Attendance';let note=view==='Pharmacology'?'Pharmacology & Therapeutics is reported separately and is not included in Combined Pathology.':'Department cumulative attendance. Combined Pathology uses Microbiology, Histopathology, Chemical Pathology and Haematology only.';return`<div class="card"><b>${title}</b><div class="muted">${note}</div>${tabs}<div class="report-table-wrap"><table class="table"><tr><th>Matric</th><th>Student</th><th>Attended</th><th>Marked sessions</th><th>Cumulative</th></tr>${rows.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${x.a}</td><td>${x.n}</td><td>${pctBadge(x.rate)}</td></tr>`).join('')}</table></div></div>`}
 
+
 function footerHtml(){return '<div class="app-footer">Designed by Nubwa Medugu</div>'}
-function renderLogin(msg=''){app.innerHTML=`<div class="wrap"><div class="card login"><div class="muted">Nile University of Nigeria</div><h2>FBCS Roll Call</h2><div class="muted">College of Health Sciences · staff access</div><form onsubmit="login(event)"><label>Name</label><select id="staff" onchange="staffChanged()" required><option value="">Select your name</option>${staffOptions()}</select><label>Department</label><div id="department" style="padding:10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;min-height:41px" class="muted">Select your name above</div><label>6-digit access code</label><input id="code" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required><div id="err" style="color:#be123c;font-size:13px;margin-top:8px">${esc(msg)}</div><button id="loginbtn" class="btn primary" style="width:100%;margin-top:14px">Sign in</button></form><div class="muted" style="margin-top:12px">Use the personal access code issued to you. Lab scientists have practical-session access only. Five incorrect attempts temporarily lock that account.</div></div>${footerHtml()}</div>`}
-function render(){let {avg,per}=calc();let at=per.filter(x=>x.rate!=null&&x.rate<(S.state.settings?.threshold||75)).length;app.innerHTML=`<div class="wrap"><div class="card top"><div><b>FBCS Roll Call</b><div class="muted">${esc(S.staff.full_name)} · ${S.staff.role==='admin'?'Admin':S.staff.role==='hod'?'HOD':S.staff.role==='lab_scientist'?'Lab Scientist':'Lecturer'}${S.staff.course?' · '+esc(courseLabel(S.staff.course)):''} · ${networkBadge()}</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button title="Install this roll-call app on your device while keeping the same synced database" class="btn install" onclick="installApp()">Install app</button><button title="Sign out of this device" class="btn light" onclick="logout()">Sign out</button></div></div><div class="tabs"><button title="See every student colour-coded by cumulative attendance risk" class="btn light ${S.tab==='dashboard'?'active':''}" onclick="S.tab='dashboard';render()">Attendance Dashboard</button><button title="Take attendance for an official timetable class or add an out-of-official-timetable class" class="btn light ${S.tab==='roll'?'active':''}" onclick="S.tab='roll';render()">Roll call</button><button title="View cumulative department attendance and download Excel reports" class="btn light ${S.tab==='summary'?'active':''}" onclick="S.tab='summary';render()">Reports</button><button title="How to use the roll-call app" class="btn light ${S.tab==='help'?'active':''}" onclick="S.tab='help';render()">Help</button>${S.staff.role==='admin'?`<button title="Manage staff access, codes, timetable data and audit history" class="btn light ${S.tab==='admin'?'active':''}" onclick="S.tab='admin';render()">Admin</button>`:''}</div><div class="grid"><div class="stat"><b>${avg==null?'—':avg+'%'}</b><div class="muted">Average attendance</div></div><div class="stat"><b>${Object.keys(S.attendance).length}</b><div class="muted">Registers</div></div><div class="stat"><b>${at}</b><div class="muted">Below ${(S.state.settings?.threshold||75)}%</div></div></div><div id="view" style="margin-top:14px"></div>${footerHtml()}</div>`;if(S.tab==='dashboard')renderDashboard();if(S.tab==='roll')renderRoll();if(S.tab==='summary')renderSummary();if(S.tab==='help')renderHelp();if(S.tab==='admin')renderAdmin()}
+
+function roleLabel(){
+  return S.staff.role==='admin'?'Admin':S.staff.role==='hod'?'HOD':S.staff.role==='lab_scientist'?'Lab Scientist':'Lecturer'
+}
+function firstName(){
+  let n=String(S.staff?.full_name||'').replace(/^(Assoc\. Prof\.|Prof\.|Dr\.|Mrs|Miss|Mr)\s*/i,'').trim();
+  return n.split(/\s+/)[0]||'';
+}
+function navButton(tab,label,icon){
+  return `<button class="nav-btn ${S.tab===tab?'active':''}" onclick="S.tab='${tab}';render()"><span class="nav-ico">${icon}</span><span>${label}</span></button>`
+}
+function renderLogin(msg=''){
+  app.innerHTML=`<div class="login-shell">
+    <div class="login-photo"><div class="login-photo-overlay"><div class="login-photo-title">FBCS Roll Call</div><div class="login-photo-sub">Simple attendance. Clear records.</div></div></div>
+    <div class="login-panel">
+      <div class="login-card">
+        <div class="eyebrow">Nile University · College of Health Sciences</div>
+        <h1>Staff sign in</h1>
+        <div class="login-note">Select your name and enter your 6-digit access code.</div>
+        <form onsubmit="login(event)">
+          <label>Name</label>
+          <select id="staff" onchange="staffChanged()" required><option value="">Select your name</option>${staffOptions()}</select>
+          <label>Department</label>
+          <div id="department" class="readonly-field">Select your name above</div>
+          <label>6-digit access code</label>
+          <input id="code" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+          <div id="err" class="login-error">${esc(msg)}</div>
+          <button id="loginbtn" class="btn primary big-action">Sign in</button>
+        </form>
+        <div class="login-help">Keep your personal code private.</div>
+      </div>
+      ${footerHtml()}
+    </div>
+  </div>`
+}
+
+function renderHome(){
+  let v=$('#view'),{avg,per}=calc(),th=S.state.settings?.threshold||75;
+  let risk=per.filter(x=>x.rate!=null&&x.rate<th).length;
+  v.innerHTML=`
+    <section class="home-hero">
+      <div class="hero-copy">
+        <div class="eyebrow light">FBCS Roll Call</div>
+        <h1>Welcome, ${esc(firstName())}</h1>
+        <p>Choose what you want to do.</p>
+      </div>
+      <div class="hero-building-label">Volta Building</div>
+    </section>
+
+    <section class="home-actions">
+      <button class="home-action" onclick="S.tab='roll';render()">
+        <span class="home-icon">✓</span><span><b>Take Attendance</b><small>Manual or 5-minute QR</small></span><span class="home-arrow">›</span>
+      </button>
+      <button class="home-action" onclick="S.tab='summary';render()">
+        <span class="home-icon">▦</span><span><b>View Reports</b><small>Attendance and Excel reports</small></span><span class="home-arrow">›</span>
+      </button>
+      <button class="home-action" onclick="S.tab='dashboard';render()">
+        <span class="home-icon">↗</span><span><b>Student Dashboard</b><small>See attendance risk quickly</small></span><span class="home-arrow">›</span>
+      </button>
+      <button class="home-action" onclick="S.tab='help';render()">
+        <span class="home-icon">?</span><span><b>Help</b><small>Simple instructions</small></span><span class="home-arrow">›</span>
+      </button>
+    </section>
+
+    <section class="home-glance">
+      <div class="mini-card"><b>${avg==null?'—':avg+'%'}</b><span>Average attendance</span></div>
+      <div class="mini-card"><b>${Object.keys(S.attendance).length}</b><span>Registers</span></div>
+      <div class="mini-card"><b>${risk}</b><span>Below ${th}%</span></div>
+    </section>`
+}
+
+function render(){
+  let role=roleLabel();
+  app.innerHTML=`<div class="app-shell">
+    <header class="app-header">
+      <div class="brand-block" onclick="S.tab='home';render()">
+        <div class="brand-title">FBCS Roll Call</div>
+        <div class="brand-sub">Nile University · College of Health Sciences</div>
+      </div>
+      <div class="user-block">
+        <div class="user-text"><b>${esc(S.staff.full_name)}</b><span>${esc(role)}${S.staff.course?' · '+esc(courseLabel(S.staff.course)):''}</span></div>
+        <div class="status-wrap">${networkBadge()}</div>
+        <button class="btn light small-btn" onclick="logout()">Sign out</button>
+      </div>
+    </header>
+
+    <nav class="main-nav">
+      ${navButton('home','Home','⌂')}
+      ${navButton('roll','Take Attendance','✓')}
+      ${navButton('summary','Reports','▦')}
+      ${navButton('help','Help','?')}
+      ${S.staff.role==='admin'?navButton('admin','Admin','⚙'):''}
+    </nav>
+
+    <main id="view"></main>
+    ${footerHtml()}
+  </div>`;
+  if(S.tab==='home')renderHome();
+  if(S.tab==='dashboard')renderDashboard();
+  if(S.tab==='roll')renderRoll();
+  if(S.tab==='summary')renderSummary();
+  if(S.tab==='help')renderHelp();
+  if(S.tab==='admin')renderAdmin();
+}
 
 function renderHelp(){
   let v=$('#view');if(!v)return;
   v.innerHTML=`
-  <div class="card"><b>How to use FBCS Roll Call</b><div class="muted" style="margin-top:5px">Quick guide for staff. Choose the attendance method that fits your class.</div></div>
+  <div class="page-heading"><div><h2>Help</h2><p>Short instructions for the main tasks.</p></div></div>
 
-  <div class="card"><b>1. Sign in</b>
-    <div class="muted" style="margin-top:6px">Open the app, select your name and enter your personal 6-digit code.</div>
+  <div class="help-grid">
+    <div class="help-card"><span>1</span><div><b>Take attendance</b><p>Open <b>Take Attendance</b> and select the correct class.</p></div></div>
+    <div class="help-card"><span>2</span><div><b>Choose Manual or QR</b><p>Manual goes through students one at a time. QR runs for 5 minutes.</p></div></div>
+    <div class="help-card"><span>3</span><div><b>Using QR</b><p>Keep the browser open. Students scan, then enter matric number and surname.</p></div></div>
+    <div class="help-card"><span>4</span><div><b>After 5 minutes</b><p>Only students who did not check in appear for manual roll call.</p></div></div>
+    <div class="help-card"><span>5</span><div><b>Several lectures in one block</b><p>Use 1, 2 or 4 attendance checks, then tap <b>Finish block / set equivalence</b>.</p></div></div>
+    <div class="help-card"><span>6</span><div><b>Correct a mistake</b><p>Use <b>Undo</b> immediately after an incorrect mark.</p></div></div>
+    <div class="help-card"><span>7</span><div><b>Reports</b><p>Open <b>Reports</b> for cumulative attendance and Excel downloads.</p></div></div>
+    <div class="help-card"><span>8</span><div><b>Historical paper registers</b><p>Authorised users can enter them from <b>Admin</b>.</p></div></div>
   </div>
 
-  <div class="card"><b>2. Choose the lecture or practical</b>
-    <div class="muted" style="margin-top:6px">Open <b>Roll call</b> and select the correct department session. If the class is outside the timetable, use <b>+ Add out-of-timetable class</b>.</div>
-  </div>
-
-  <div class="card"><b>3. Choose an attendance method</b>
-    <div class="muted" style="margin-top:6px"><b>Manual roll call:</b> mark students one at a time as Present, Late or Absent.</div>
-    <div class="muted" style="margin-top:6px"><b>5-minute QR:</b> start QR mode and keep the app open in your browser. Students scan the rotating QR and enter their matric number + surname. After 5 minutes, only students who did not check in are shown for manual marking.</div>
-  </div>
-
-  <div class="card"><b>4. If there are several lectures in one block</b>
-    <div class="muted" style="margin-top:6px">A morning block represents 4 lecture equivalents.</div>
-    <div class="muted" style="margin-top:6px">You may take 1, 2 or 4 attendance checks:</div>
-    <div style="margin-top:8px">
-      <div class="row"><span class="grow">1 attendance check</span><b>counts as 4 lectures</b></div>
-      <div class="row"><span class="grow">2 attendance checks</span><b>each counts as 2 lectures</b></div>
-      <div class="row"><span class="grow">4 attendance checks</span><b>each counts as 1 lecture</b></div>
-    </div>
-    <div class="muted" style="margin-top:8px">After the final attendance check, tap <b>Finish block / set equivalence</b>.</div>
-  </div>
-
-  <div class="card"><b>5. Correcting a mistake</b>
-    <div class="muted" style="margin-top:6px">Tap <b>Undo</b> immediately after a wrong mark. Admin can restart the current session if a complete register needs to be redone.</div>
-  </div>
-
-  <div class="card"><b>6. Historical paper registers</b>
-    <div class="muted" style="margin-top:6px">Only authorised users can use <b>Enter attendance from a manual register</b> in Admin. Enter the class details, then mark the paper register electronically. The action is retained in the audit trail.</div>
-  </div>
-
-  <div class="card"><b>7. Reports</b>
-    <div class="muted" style="margin-top:6px">Open <b>Reports</b> to view cumulative attendance and download Excel reports. The dashboard uses Green ≥85%, Amber 75–84%, and Red &lt;75%.</div>
-  </div>
-
-  <div class="card"><b>Important</b>
-    <div class="muted" style="margin-top:6px">Do not share your personal staff code. QR attendance must remain open in your browser while the 5-minute check-in is running. If the app shows Offline, wait for the connection to return before continuing.</div>
-  </div>`
+  <div class="card important-card"><b>Important</b><p>Do not share your staff code. If the app shows Offline, wait for the connection to return before marking attendance.</p></div>`
 }
