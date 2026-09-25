@@ -7,4 +7,50 @@ function renderPathologyAttendance(){let view=S.pathView||'Microbiology',labels=
 
 function footerHtml(){return '<div class="app-footer">Designed by Nubwa Medugu</div>'}
 function renderLogin(msg=''){app.innerHTML=`<div class="wrap"><div class="card login"><div class="muted">Nile University of Nigeria</div><h2>FBCS Roll Call</h2><div class="muted">College of Health Sciences · staff access</div><form onsubmit="login(event)"><label>Name</label><select id="staff" onchange="staffChanged()" required><option value="">Select your name</option>${staffOptions()}</select><label>Department</label><div id="department" style="padding:10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;min-height:41px" class="muted">Select your name above</div><label>6-digit access code</label><input id="code" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required><div id="err" style="color:#be123c;font-size:13px;margin-top:8px">${esc(msg)}</div><button id="loginbtn" class="btn primary" style="width:100%;margin-top:14px">Sign in</button></form><div class="muted" style="margin-top:12px">Use the personal access code issued to you. Lab scientists have practical-session access only. Five incorrect attempts temporarily lock that account.</div></div>${footerHtml()}</div>`}
-function render(){let {avg,per}=calc();let at=per.filter(x=>x.rate!=null&&x.rate<(S.state.settings?.threshold||75)).length;app.innerHTML=`<div class="wrap"><div class="card top"><div><b>FBCS Roll Call</b><div class="muted">${esc(S.staff.full_name)} · ${S.staff.role==='admin'?'Admin':S.staff.role==='hod'?'HOD':S.staff.role==='lab_scientist'?'Lab Scientist':'Lecturer'}${S.staff.course?' · '+esc(courseLabel(S.staff.course)):''} · ${networkBadge()}</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button title="Install this roll-call app on your device while keeping the same synced database" class="btn install" onclick="installApp()">Install app</button><button title="Sign out of this device" class="btn light" onclick="logout()">Sign out</button></div></div><div class="tabs"><button title="See every student colour-coded by cumulative attendance risk" class="btn light ${S.tab==='dashboard'?'active':''}" onclick="S.tab='dashboard';render()">Attendance Dashboard</button><button title="Take attendance for an official timetable class or add an out-of-official-timetable class" class="btn light ${S.tab==='roll'?'active':''}" onclick="S.tab='roll';render()">Roll call</button><button title="View cumulative department attendance and download Excel reports" class="btn light ${S.tab==='summary'?'active':''}" onclick="S.tab='summary';render()">Reports</button>${S.staff.role==='admin'?`<button title="Manage staff access, codes, timetable data and audit history" class="btn light ${S.tab==='admin'?'active':''}" onclick="S.tab='admin';render()">Admin</button>`:''}</div><div class="grid"><div class="stat"><b>${avg==null?'—':avg+'%'}</b><div class="muted">Average attendance</div></div><div class="stat"><b>${Object.keys(S.attendance).length}</b><div class="muted">Registers</div></div><div class="stat"><b>${at}</b><div class="muted">Below ${(S.state.settings?.threshold||75)}%</div></div></div><div id="view" style="margin-top:14px"></div>${footerHtml()}</div>`;if(S.tab==='dashboard')renderDashboard();if(S.tab==='roll')renderRoll();if(S.tab==='summary')renderSummary();if(S.tab==='admin')renderAdmin()}
+function render(){let {avg,per}=calc();let at=per.filter(x=>x.rate!=null&&x.rate<(S.state.settings?.threshold||75)).length;app.innerHTML=`<div class="wrap"><div class="card top"><div><b>FBCS Roll Call</b><div class="muted">${esc(S.staff.full_name)} · ${S.staff.role==='admin'?'Admin':S.staff.role==='hod'?'HOD':S.staff.role==='lab_scientist'?'Lab Scientist':'Lecturer'}${S.staff.course?' · '+esc(courseLabel(S.staff.course)):''} · ${networkBadge()}</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button title="Install this roll-call app on your device while keeping the same synced database" class="btn install" onclick="installApp()">Install app</button><button title="Sign out of this device" class="btn light" onclick="logout()">Sign out</button></div></div><div class="tabs"><button title="See every student colour-coded by cumulative attendance risk" class="btn light ${S.tab==='dashboard'?'active':''}" onclick="S.tab='dashboard';render()">Attendance Dashboard</button><button title="Take attendance for an official timetable class or add an out-of-official-timetable class" class="btn light ${S.tab==='roll'?'active':''}" onclick="S.tab='roll';render()">Roll call</button><button title="View cumulative department attendance and download Excel reports" class="btn light ${S.tab==='summary'?'active':''}" onclick="S.tab='summary';render()">Reports</button><button title="How to use the roll-call app" class="btn light ${S.tab==='help'?'active':''}" onclick="S.tab='help';render()">Help</button>${S.staff.role==='admin'?`<button title="Manage staff access, codes, timetable data and audit history" class="btn light ${S.tab==='admin'?'active':''}" onclick="S.tab='admin';render()">Admin</button>`:''}</div><div class="grid"><div class="stat"><b>${avg==null?'—':avg+'%'}</b><div class="muted">Average attendance</div></div><div class="stat"><b>${Object.keys(S.attendance).length}</b><div class="muted">Registers</div></div><div class="stat"><b>${at}</b><div class="muted">Below ${(S.state.settings?.threshold||75)}%</div></div></div><div id="view" style="margin-top:14px"></div>${footerHtml()}</div>`;if(S.tab==='dashboard')renderDashboard();if(S.tab==='roll')renderRoll();if(S.tab==='summary')renderSummary();if(S.tab==='help')renderHelp();if(S.tab==='admin')renderAdmin()}
+
+function renderHelp(){
+  let v=$('#view');if(!v)return;
+  v.innerHTML=`
+  <div class="card"><b>How to use FBCS Roll Call</b><div class="muted" style="margin-top:5px">Quick guide for staff. Choose the attendance method that fits your class.</div></div>
+
+  <div class="card"><b>1. Sign in</b>
+    <div class="muted" style="margin-top:6px">Open the app, select your name and enter your personal 6-digit code.</div>
+  </div>
+
+  <div class="card"><b>2. Choose the lecture or practical</b>
+    <div class="muted" style="margin-top:6px">Open <b>Roll call</b> and select the correct department session. If the class is outside the timetable, use <b>+ Add out-of-timetable class</b>.</div>
+  </div>
+
+  <div class="card"><b>3. Choose an attendance method</b>
+    <div class="muted" style="margin-top:6px"><b>Manual roll call:</b> mark students one at a time as Present, Late or Absent.</div>
+    <div class="muted" style="margin-top:6px"><b>5-minute QR:</b> start QR mode and keep the app open in your browser. Students scan the rotating QR and enter their matric number + surname. After 5 minutes, only students who did not check in are shown for manual marking.</div>
+  </div>
+
+  <div class="card"><b>4. If there are several lectures in one block</b>
+    <div class="muted" style="margin-top:6px">A morning block represents 4 lecture equivalents.</div>
+    <div class="muted" style="margin-top:6px">You may take 1, 2 or 4 attendance checks:</div>
+    <div style="margin-top:8px">
+      <div class="row"><span class="grow">1 attendance check</span><b>counts as 4 lectures</b></div>
+      <div class="row"><span class="grow">2 attendance checks</span><b>each counts as 2 lectures</b></div>
+      <div class="row"><span class="grow">4 attendance checks</span><b>each counts as 1 lecture</b></div>
+    </div>
+    <div class="muted" style="margin-top:8px">After the final attendance check, tap <b>Finish block / set equivalence</b>.</div>
+  </div>
+
+  <div class="card"><b>5. Correcting a mistake</b>
+    <div class="muted" style="margin-top:6px">Tap <b>Undo</b> immediately after a wrong mark. Admin can restart the current session if a complete register needs to be redone.</div>
+  </div>
+
+  <div class="card"><b>6. Historical paper registers</b>
+    <div class="muted" style="margin-top:6px">Only authorised users can use <b>Enter attendance from a manual register</b> in Admin. Enter the class details, then mark the paper register electronically. The action is retained in the audit trail.</div>
+  </div>
+
+  <div class="card"><b>7. Reports</b>
+    <div class="muted" style="margin-top:6px">Open <b>Reports</b> to view cumulative attendance and download Excel reports. The dashboard uses Green ≥85%, Amber 75–84%, and Red &lt;75%.</div>
+  </div>
+
+  <div class="card"><b>Important</b>
+    <div class="muted" style="margin-top:6px">Do not share your personal staff code. QR attendance must remain open in your browser while the 5-minute check-in is running. If the app shows Offline, wait for the connection to return before continuing.</div>
+  </div>`
+}
