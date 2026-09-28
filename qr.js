@@ -16,7 +16,7 @@ function qrEligible(ses){
   return !!(ses&&String(ses.type||'').toLowerCase()==='lecture'&&['lecturer','hod','admin'].includes(S.staff?.role));
 }
 async function qrPost(body){
-  let r=await fetch(URL+'/functions/v1/qr-attendance-session',{
+  let r=await authedFetch(URL+'/functions/v1/qr-attendance-session',{
     method:'POST',
     headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},
     body:JSON.stringify(body)
