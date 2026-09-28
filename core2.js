@@ -1,5 +1,5 @@
 function visibleSessions(){
-  let t=S.state.timetable||[],today=iso(),d=new Date().getDay(),ex=S.state.schedule_exclusions||[];
+  let t=S.state.timetable||[],today=iso(),d=lagosDay(),ex=S.state.schedule_exclusions||[];
   if(ex.includes(today))return[];
   t=t.filter(x=>{
     if(x.date&&x.date!==today)return false;
@@ -40,11 +40,13 @@ async function audit(action,ses,studentId=null,oldStatus=null,newStatus=null,det
 function setRollSession(id){S.selected=id;S.rollSession=id;let ses=visibleSessions().find(x=>x.id===id);if(!ses){S.rollIndex=0;renderRoll();return}let r=roster(ses),rec=S.attendance[key(ses)]||{},first=r.findIndex(st=>!rec[st.id]);S.rollIndex=first>=0?first:0;renderRoll()}
 function gotoStudent(delta){let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses)return;let r=roster(ses);S.rollIndex=Math.max(0,Math.min(r.length,S.rollIndex+delta));renderRoll()}
 function reviewUnmarked(){let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses)return;let r=roster(ses),rec=S.attendance[key(ses)]||{},i=r.findIndex(st=>!rec[st.id]);S.rollIndex=i>=0?i:0;renderRoll()}
+function registerMarkCount(rec){return Object.keys(rec||{}).filter(k=>k!=='__meta'&&['present','late','absent'].includes(rec[k])).length}
+function registerIsComplete(rec){return registerMarkCount(rec)===(S.state.students||[]).length}
 function blockRegisterKeys(ses){
   if(!ses)return[];
   let base=ses.baseSessionId||ses.id,today=iso(),keys=[];
-  let k1=today+'__'+base;if(S.attendance[k1])keys.push(k1);
-  for(let n=2;n<=4;n++){let k=today+'__'+base+'__L'+n;if(S.attendance[k])keys.push(k)}
+  let k1=today+'__'+base;if(S.attendance[k1]&&registerIsComplete(S.attendance[k1]))keys.push(k1);
+  for(let n=2;n<=4;n++){let k=today+'__'+base+'__L'+n;if(S.attendance[k]&&registerIsComplete(S.attendance[k]))keys.push(k)}
   return keys;
 }
 function blockIsFinalized(ses){
