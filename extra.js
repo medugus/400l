@@ -20,9 +20,19 @@ function mapExtraSession(x){
   };
 }
 
+async function extraSessionPost(body){
+  let r=await fetch(URL+'/functions/v1/extra-session-manage',{
+    method:'POST',
+    headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  let b=await r.json();
+  if(!r.ok)throw Error(b.error||'Out-of-timetable class request failed');
+  return b;
+}
 async function loadExtraSessions(){
-  let rows=await req('/rest/v1/extra_sessions?active=eq.true&select=id,created_by,created_by_name,course,session_date,start_time,end_time,session_type,venue,reason,label,active,created_at&order=session_date.asc,start_time.asc');
-  S.extraSessions=(rows||[]).map(mapExtraSession);
+  let b=await extraSessionPost({action:'list'});
+  S.extraSessions=(b.rows||[]).map(mapExtraSession);
 }
 
 const _baseLoad=load;
@@ -82,8 +92,8 @@ async function saveExtraSession(e){
   if(end<=start){$('#extraErr').textContent='End time must be after the start time.';return}
   let btn=$('#extraSave');btn.disabled=true;btn.textContent='Creating…';
   try{
-    let rows=await req('/rest/v1/extra_sessions',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({created_by:S.session.user.id,created_by_name:S.staff.full_name,course:S.staff.course,session_date:date,start_time:start,end_time:end,session_type:type,venue:venue||null,reason,label:'OUT OF OFFICIAL TIMETABLE CLASS'})});
-    let row=Array.isArray(rows)?rows[0]:rows;if(!row)throw Error('Class was created but could not be loaded. Refresh and try again.');
+    let b=await extraSessionPost({action:'create',course:S.staff.course||'',session_date:date,start_time:start,end_time:end,session_type:type,venue:venue||'',reason});
+    let row=b.row;if(!row)throw Error('Class was created but could not be loaded. Refresh and try again.');
     let ses=mapExtraSession(row);S.extraSessions.push(ses);
     document.getElementById('extraClassDialog').close();
     audit('extra_session_created',ses,null,null,null,{reason,date,start_time:start,end_time:end,venue,type,label:ses.label});
@@ -128,8 +138,8 @@ async function cancelExtraSession(id){
   if(S.staff?.role!=='admin')return;
   if(!confirm('Cancel this out-of-timetable class? Existing attendance records, if any, will remain in reports and the audit trail.'))return;
   try{
-    await req('/rest/v1/extra_sessions?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({active:false})});
-    let ses=(S.extraSessions||[]).find(x=>x.extraId===id);if(ses)audit('extra_session_cancelled',ses,null,null,null,{reason:ses.reason});
+    await extraSessionPost({action:'cancel',id});
+    let ses=(S.extraSessions||[]).find(x=>x.extraId===id);
     S.extraSessions=(S.extraSessions||[]).filter(x=>x.extraId!==id);renderAdmin();
   }catch(e){alert('Could not cancel class: '+e.message)}
 }
