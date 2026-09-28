@@ -63,10 +63,35 @@ const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,m=
 function courseLabel(c){return c==='Pharmacology'?'Pharmacology & Therapeutics':c==='Histopathology'?'Anatomic Pathology / Histopathology':c}
 async function installApp(){if(installPrompt){installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;return}if(/iphone|ipad|ipod/i.test(navigator.userAgent)){alert('On iPhone/iPad: tap Share, then Add to Home Screen.')}else{alert('Use your browser menu and choose Install app or Add to Home screen.')}}
 function networkBadge(){return navigator.onLine?'<span class="online">Online · syncing</span>':'<span class="offline">Offline · changes cannot sync</span>'}
-function hdr(token,extra={}){return{apikey:KEY,Authorization:`Bearer ${token||KEY}`,'Content-Type':'application/json',...extra}}
-async function req(path,opt={}){let r=await fetch(URL+path,{...opt,headers:hdr(S.session?.access_token,opt.headers||{})});let t=await r.text(),b;try{b=t?JSON.parse(t):null}catch{b=t}if(!r.ok)throw Error(b?.msg||b?.message||b?.error_description||b?.error||`Request failed ${r.status}`);return b}
-function saveSession(x){S.session=x; x?localStorage.setItem(SK,JSON.stringify(x)):localStorage.removeItem(SK)}
-async function refresh(){if(!S.session?.refresh_token)return false;let r=await fetch(URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:hdr(),body:JSON.stringify({refresh_token:S.session.refresh_token})});if(!r.ok){saveSession(null);return false}let b=await r.json();b.expires_at=Math.floor(Date.now()/1000)+(b.expires_in||3600);saveSession(b);return true}
+function hdr(token,extra={}){let h={apikey:KEY,'Content-Type':'application/json',...extra};if(token)h.Authorization=`Bearer ${token}`;return h}
+function saveSession(x){S.session=x;x?localStorage.setItem(SK,JSON.stringify(x)):localStorage.removeItem(SK)}
+async function refresh(){
+  if(!S.session?.refresh_token)return false;
+  let r=await fetch(URL+'/auth/v1/token?grant_type=refresh_token',{
+    method:'POST',
+    headers:{apikey:KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({refresh_token:S.session.refresh_token})
+  });
+  if(!r.ok){saveSession(null);return false}
+  let b=await r.json();b.expires_at=Math.floor(Date.now()/1000)+(b.expires_in||3600);saveSession(b);return true
+}
+async function authedFetch(input,opt={},retry=true){
+  if(S.session?.expires_at&&S.session.expires_at<Date.now()/1000+45)await refresh();
+  let headers={...(opt.headers||{}),apikey:KEY};
+  if(S.session?.access_token)headers.Authorization=`Bearer ${S.session.access_token}`;
+  let r=await fetch(input,{...opt,headers});
+  if(r.status===401&&retry&&S.session?.refresh_token){
+    let ok=await refresh();
+    if(ok)return authedFetch(input,opt,false);
+  }
+  return r
+}
+async function req(path,opt={}){
+  let r=await authedFetch(URL+path,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});
+  let t=await r.text(),b;try{b=t?JSON.parse(t):null}catch{b=t}
+  if(!r.ok)throw Error(b?.msg||b?.message||b?.error_description||b?.error||`Request failed ${r.status}`);
+  return b
+}
 async function restore(){try{let x=JSON.parse(localStorage.getItem(SK)||'null');if(!x)return false;saveSession(x);if((x.expires_at||0)<Date.now()/1000+60)await refresh();return !!S.session}catch{return false}}
 async function login(e){e.preventDefault();let login_key=$('#staff').value,code=$('#code').value.trim();let btn=$('#loginbtn');btn.disabled=true;btn.textContent='Signing in…';try{let r=await fetch(URL+'/functions/v1/staff-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},body:JSON.stringify({login_key,code})});let b=await r.json();if(!r.ok||!b.session)throw Error(b.error||'Sign-in failed');saveSession(b.session);S.staff=b.staff||null;await load();}catch(e){$('#err').textContent=e.message;btn.disabled=false;btn.textContent='Sign in'}}
 function staffChanged(){let st=STAFF.find(x=>x.key===$('#staff')?.value);let el=$('#department');if(el)el.textContent=st?st.department:'Select your name above'}
@@ -74,4 +99,11 @@ function staffOptions(){return [...new Set(STAFF.map(x=>x.department))].map(g=>`
 async function logout(){try{await req('/auth/v1/logout',{method:'POST'})}catch{}saveSession(null);S.staff=null;renderLogin()}
 async function load(){try{let uid=S.session.user.id;let p=await req('/rest/v1/staff_profiles?user_id=eq.'+encodeURIComponent(uid)+'&select=user_id,email,full_name,role,course&limit=1');if(!p?.[0])throw Error('This account has no staff profile. Ask the faculty administrator to add it.');S.staff=p[0];let rows=await req('/rest/v1/rollcall_state?select=key,value');S.state=Object.fromEntries(rows.map(x=>[x.key,x.value]));await loadAttendance();render()}catch(e){saveSession(null);renderLogin(e.message)}}
 async function loadAttendance(){let rows=await req('/rest/v1/attendance_sessions?select=session_key,data&order=session_key.asc');S.attendance=Object.fromEntries(rows.map(x=>[x.session_key,x.data]))}
-const iso=()=>new Date().toISOString().slice(0,10),days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function lagosParts(){
+  let parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Lagos',year:'numeric',month:'2-digit',day:'2-digit',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  return Object.fromEntries(parts.map(x=>[x.type,x.value]))
+}
+const iso=()=>{let p=lagosParts();return p.year+'-'+p.month+'-'+p.day};
+function lagosDay(){let w=lagosParts().weekday;return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(w)}
+function lagosTime(){let p=lagosParts();return p.hour+':'+p.minute}
+const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
