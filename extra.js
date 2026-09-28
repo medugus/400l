@@ -21,7 +21,7 @@ function mapExtraSession(x){
 }
 
 async function extraSessionPost(body){
-  let r=await fetch(URL+'/functions/v1/extra-session-manage',{
+  let r=await authedFetch(URL+'/functions/v1/extra-session-manage',{
     method:'POST',
     headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},
     body:JSON.stringify(body)
@@ -69,12 +69,11 @@ function canCreateExtraSession(){
 }
 
 function defaultExtraTimes(){
-  let d=new Date(),mins=Math.ceil(d.getMinutes()/15)*15;
-  if(mins>=60){d.setHours(d.getHours()+1);mins=0}
-  d.setMinutes(mins,0,0);
-  let end=new Date(d.getTime()+60*60*1000);
-  const f=x=>String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0');
-  return [f(d),f(end)];
+  let [h,m]=lagosTime().split(':').map(Number),mins=Math.ceil(m/15)*15;
+  if(mins>=60){h=(h+1)%24;mins=0}
+  let eh=h+1,em=mins;if(eh>=24)eh=23,em=59;
+  const f=(hh,mm)=>String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  return [f(h,mins),f(eh,em)];
 }
 
 function openExtraSessionDialog(){
@@ -96,7 +95,6 @@ async function saveExtraSession(e){
     let row=b.row;if(!row)throw Error('Class was created but could not be loaded. Refresh and try again.');
     let ses=mapExtraSession(row);S.extraSessions.push(ses);
     document.getElementById('extraClassDialog').close();
-    audit('extra_session_created',ses,null,null,null,{reason,date,start_time:start,end_time:end,venue,type,label:ses.label});
     if(date===iso()){
       S.selected=ses.id;S.rollSession=ses.id;S.rollIndex=0;renderRoll();
     }else{
