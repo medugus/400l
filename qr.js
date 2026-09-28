@@ -25,6 +25,23 @@ async function qrPost(body){
   if(!r.ok)throw Error(b.error||'QR attendance request failed');
   return b;
 }
+async function recoverQrSession(){
+  if(!S.session||!S.staff)return;
+  let b=await qrPost({action:'recover',session_date:iso()});
+  let q=b.session;if(!q)return;
+  let prefix=iso()+'__';
+  if(!String(q.session_key||'').startsWith(prefix))return;
+  let rollSessionId=String(q.session_key).slice(prefix.length);
+  let ses=visibleSessions().find(x=>x.id===rollSessionId);
+  if(!ses)return;
+  S.selected=rollSessionId;S.rollSession=rollSessionId;
+  S.qrActive={sessionId:q.id,sessionKey:q.session_key,rollSessionId,token:q.token,windowExpiresAt:q.window_expires_at,tokenExpiresAt:q.token_expires_at,checkedIn:q.checked_in||0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
+  if(q.status==='expired'||Date.now()>=new Date(q.window_expires_at).getTime()){
+    S.qrActive.finishing=true;
+    await finishQrWindow(true);
+  }else startQrTicker();
+}
+
 function qrCheckinUrl(q){
   return location.origin+'/checkin.html?sid='+encodeURIComponent(q.sessionId)+'&token='+encodeURIComponent(q.token);
 }
@@ -126,5 +143,12 @@ renderRoll=function(){
   if(S.qrActive&&S.qrActive.rollSessionId===ses.id){
     v.querySelectorAll('.student-card').forEach(x=>x.style.display='none');
     renderQrCode();updateQrStatusUi();startQrTicker();
+  }
+};
+const _qrBaseLoad=load;
+load=async function(){
+  await _qrBaseLoad();
+  if(S.session&&S.staff){
+    try{await recoverQrSession();render()}catch(e){console.error('Could not recover QR attendance session',e)}
   }
 };
