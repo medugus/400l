@@ -1,5 +1,5 @@
 async function fetchAdminStaff(){
-  let r=await fetch(URL+'/functions/v1/admin-staff',{headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});
+  let r=await authedFetch(URL+'/functions/v1/admin-staff',{headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});
   let b=await r.json();if(!r.ok)throw Error(b.error||'Could not load staff');S.adminStaff=b.staff||[];return S.adminStaff
 }
 async function loadAdminPanel(){
@@ -30,7 +30,7 @@ function renderStaffAdmin(){
 async function resetStaffCode(loginKey){
   if(!confirm('Generate a new 6-digit code for this staff member? Their old code will stop working immediately.'))return;
   try{
-    let r=await fetch(URL+'/functions/v1/admin-staff',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reset_code',login_key:loginKey})});
+    let r=await authedFetch(URL+'/functions/v1/admin-staff',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reset_code',login_key:loginKey})});
     let b=await r.json();if(!r.ok)throw Error(b.error||'Could not reset code');
     alert('New code: '+b.code+'\nSend this code only to that staff member.');
     await fetchAdminStaff();renderStaffAdmin();loadAdminPanel();
@@ -39,7 +39,7 @@ async function resetStaffCode(loginKey){
 async function toggleStaff(loginKey,active){
   if(!confirm((active?'Activate':'Deactivate')+' this staff account?'))return;
   try{
-    let r=await fetch(URL+'/functions/v1/admin-staff',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({action:'set_active',login_key:loginKey,active})});
+    let r=await authedFetch(URL+'/functions/v1/admin-staff',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({action:'set_active',login_key:loginKey,active})});
     let b=await r.json();if(!r.ok)throw Error(b.error||'Could not update staff');
     await fetchAdminStaff();renderStaffAdmin();loadAdminPanel();
   }catch(e){alert(e.message)}
@@ -134,7 +134,7 @@ async function saveManualEntry(fillAbsent){
   let msg=`Save this historical register?\n\n${d.meta.date} · ${courseLabel(d.meta.course)} · ${d.meta.type}\n${d.meta.start_time}–${d.meta.end_time} · ${d.meta.lecturer}\n${students.length} students marked`;
   if(!confirm(msg))return;
   try{
-    let r=await fetch(URL+'/functions/v1/manual-attendance-entry',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({...d.meta,marks:d.marks})});
+    let r=await authedFetch(URL+'/functions/v1/manual-attendance-entry',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({...d.meta,marks:d.marks})});
     let b=await r.json();if(!r.ok)throw Error(b.error||'Could not save manual register');
     S.manualDraft=null;await loadAttendance();alert('Manual attendance saved successfully.');renderAdmin()
   }catch(e){alert('Manual attendance was not saved: '+e.message)}
