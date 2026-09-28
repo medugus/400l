@@ -14,7 +14,7 @@ function reportData(){
 }
 async function fetchExcelLink(sheet){
   let endpoint=URL+'/functions/v1/export-attendance-xlsx'+(sheet?'?sheet='+encodeURIComponent(sheet):'');
-  let r=await fetch(endpoint,{method:'GET',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});
+  let r=await authedFetch(endpoint,{method:'GET'});
   let type=r.headers.get('content-type')||'';
   if(!r.ok){let t=await r.text();try{let j=JSON.parse(t);throw Error(j.error||t)}catch(e){if(e instanceof SyntaxError)throw Error(t||'Could not create Excel report');throw e}}
   if(type.includes('application/json')){
