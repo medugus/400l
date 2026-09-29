@@ -17,12 +17,12 @@
 <form id="f">
 <label>Matric number</label>
 <input id="matric" autocomplete="off" required>
-<label>Group</label>
+<div id="groupWrap"><label>Group</label>
 <select id="group">
   <option value="">Select group for practicals</option>
   <option value="A">Group A</option>
   <option value="B">Group B</option>
-</select>
+</select></div>
 <label>Surname</label>
 <input id="surname" autocomplete="family-name" required>
 <button id="btn" class="btn">Check in</button>
@@ -32,8 +32,9 @@
 <script>
 const URL='https://ktlynfdhhfwqnhtkgauy.supabase.co';
 const KEY='sb_publishable_5rmnEy05iKgq7bcCHYfQzw_Anumymr5';
-const p=new URLSearchParams(location.search),sid=p.get('sid'),token=p.get('token');
-const msg=document.getElementById('msg'),form=document.getElementById('f'),btn=document.getElementById('btn');
+const p=new URLSearchParams(location.search),sid=p.get('sid'),token=p.get('token'),type=p.get('type')||'Lecture';
+const msg=document.getElementById('msg'),form=document.getElementById('f'),btn=document.getElementById('btn'),groupWrap=document.getElementById('groupWrap'),groupEl=document.getElementById('group');
+if(String(type).toLowerCase()!=='practical'){groupWrap.style.display='none';groupEl.value='';}
 function show(kind,text){msg.className=kind;msg.textContent=text}
 if(!sid||!token){form.style.display='none';show('err','This attendance link is incomplete. Please scan the current QR code again.')}
 form?.addEventListener('submit',async e=>{
