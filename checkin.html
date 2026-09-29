@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0f172a">
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0f172a;background:#f1f5f9}
-*{box-sizing:border-box}body{margin:0}.wrap{max-width:460px;margin:auto;padding:18px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin-top:8vh}.muted{color:#64748b;font-size:13px}.title{font-size:27px;font-weight:800;margin:6px 0 2px}label{display:block;font-size:12px;color:#475569;margin:14px 0 5px}input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}.btn{width:100%;border:0;border-radius:10px;padding:13px 16px;font-weight:750;background:#0f172a;color:#fff;margin-top:16px;font-size:16px}.btn:disabled{opacity:.6}.ok{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:12px;padding:14px;margin-top:16px}.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:12px;padding:14px;margin-top:16px}.brand{text-align:center;color:#64748b;font-size:11px;margin-top:14px}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:460px;margin:auto;padding:18px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin-top:8vh}.muted{color:#64748b;font-size:13px}.title{font-size:27px;font-weight:800;margin:6px 0 2px}label{display:block;font-size:12px;color:#475569;margin:14px 0 5px}input,select{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff}.btn{width:100%;border:0;border-radius:10px;padding:13px 16px;font-weight:750;background:#0f172a;color:#fff;margin-top:16px;font-size:16px}.btn:disabled{opacity:.6}.ok{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:12px;padding:14px;margin-top:16px}.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:12px;padding:14px;margin-top:16px}.brand{text-align:center;color:#64748b;font-size:11px;margin-top:14px}
 </style>
 </head>
 <body><div class="wrap"><div class="card">
@@ -17,6 +17,12 @@
 <form id="f">
 <label>Matric number</label>
 <input id="matric" autocomplete="off" required>
+<label>Group</label>
+<select id="group">
+  <option value="">Select group for practicals</option>
+  <option value="A">Group A</option>
+  <option value="B">Group B</option>
+</select>
 <label>Surname</label>
 <input id="surname" autocomplete="family-name" required>
 <button id="btn" class="btn">Check in</button>
@@ -37,7 +43,7 @@ form?.addEventListener('submit',async e=>{
    const r=await fetch(URL+'/functions/v1/student-qr-checkin',{
      method:'POST',
      headers:{'Content-Type':'application/json','apikey':KEY},
-     body:JSON.stringify({session_id:sid,token,student_id:document.getElementById('matric').value.trim(),surname:document.getElementById('surname').value.trim()})
+     body:JSON.stringify({session_id:sid,token,student_id:document.getElementById('matric').value.trim(),group:document.getElementById('group').value,surname:document.getElementById('surname').value.trim()})
    });
    const b=await r.json();
    if(!r.ok)throw Error(b.error||'Check-in failed');
