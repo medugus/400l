@@ -13,15 +13,22 @@ function visibleSessions(){
   let out=[];
   S.multiSessions=S.multiSessions||{};
   for(let base of t){
-    const isLecture=String(base.type||'').toLowerCase()==='lecture';
+    const kind=String(base.type||'').toLowerCase();
+    const isLecture=kind==='lecture';
+    const isPractical=kind==='practical';
     const isMorning=isLecture && String(base.start||'')<'12:00';
-    out.push({...base,lectureNumber:isLecture?1:null,baseSessionId:base.id,lecturer:(S.attendance[today+'__'+base.id]?.__meta?.lecturer||'')});
-    if(!isLecture)continue;
-    for(let n=2;n<=4;n++){
-      let id=base.id+'__L'+n,k=today+'__'+id,persisted=S.attendance[k],temp=S.multiSessions[id];
-      if(isMorning||persisted||temp){
-        out.push({...base,id,lectureNumber:n,baseSessionId:base.id,lecturer:(persisted?.__meta?.lecturer||temp?.lecturer||''),multiLecture:true});
+    out.push({...base,lectureNumber:isLecture?1:null,practicalNumber:isPractical?1:null,baseSessionId:base.id,lecturer:(S.attendance[today+'__'+base.id]?.__meta?.lecturer||'')});
+    if(isLecture){
+      for(let n=2;n<=4;n++){
+        let id=base.id+'__L'+n,k=today+'__'+id,persisted=S.attendance[k],temp=S.multiSessions[id];
+        if(isMorning||persisted||temp){
+          out.push({...base,id,lectureNumber:n,baseSessionId:base.id,lecturer:(persisted?.__meta?.lecturer||temp?.lecturer||''),multiLecture:true});
+        }
       }
+    }
+    if(isPractical){
+      let id=base.id+'__P2',k=today+'__'+id,persisted=S.attendance[k],temp=S.multiSessions[id];
+      out.push({...base,id,practicalNumber:2,baseSessionId:base.id,lecturer:(persisted?.__meta?.lecturer||temp?.lecturer||''),multiPractical:true});
     }
   }
   return out;
@@ -29,7 +36,7 @@ function visibleSessions(){
 function roster(session){let cohorts=S.state.cohorts||[],map=S.state.courseCohort||{},students=S.state.students||[],by=Object.fromEntries(students.map(x=>[x.id,x]));let c=cohorts.find(x=>x.id===(map[session.course]||cohorts[0]?.id))||cohorts[0];return (c?.members||[]).map(id=>by[id]).filter(Boolean)}
 function key(s){return iso()+'__'+s.id} function markLabel(v){return v==='present'?'Present':v==='late'?'Late':v==='absent'?'Absent':''}
 function queueSave(k,rec){let snapshot=JSON.parse(JSON.stringify(rec));saveChain=saveChain.then(()=>req('/rest/v1/attendance_sessions?on_conflict=session_key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({session_key:k,data:snapshot,updated_at:new Date().toISOString()})})).catch(e=>{console.error(e);alert('Attendance could not be saved. Check your connection and try again.');});return saveChain}
-function sessionRecord(ses){let k=key(ses),rec={...(S.attendance[k]||{})};rec.__meta={course:ses.course,type:ses.type,venue:ses.venue||'',date:iso(),takenBy:S.staff.full_name,takenByRole:S.staff.role,lecturer:ses.lecturer||S.staff.full_name,lectureNumber:ses.lectureNumber||1,baseSessionId:ses.baseSessionId||ses.id,cohort:'',pendingLecture:false,savedAt:new Date().toISOString()};return [k,rec]}
+function sessionRecord(ses){let k=key(ses),rec={...(S.attendance[k]||{})};rec.__meta={course:ses.course,type:ses.type,venue:ses.venue||'',date:iso(),takenBy:S.staff.full_name,takenByRole:S.staff.role,lecturer:ses.lecturer||S.staff.full_name,lectureNumber:ses.lectureNumber||null,practicalNumber:ses.practicalNumber||null,baseSessionId:ses.baseSessionId||ses.id,cohort:'',pendingLecture:false,savedAt:new Date().toISOString()};return [k,rec]}
 async function audit(action,ses,studentId=null,oldStatus=null,newStatus=null,details={}){
   try{
     await req('/rest/v1/attendance_audit',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({
