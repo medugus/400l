@@ -27,7 +27,7 @@ function visibleSessions(){
 function roster(session){let cohorts=S.state.cohorts||[],map=S.state.courseCohort||{},students=S.state.students||[],by=Object.fromEntries(students.map(x=>[x.id,x]));let c=cohorts.find(x=>x.id===(map[session.course]||cohorts[0]?.id))||cohorts[0];return (c?.members||[]).map(id=>by[id]).filter(Boolean)}
 function key(s){return iso()+'__'+s.id} function markLabel(v){return v==='present'?'Present':v==='late'?'Late':v==='absent'?'Absent':''}
 function queueSave(k,rec){let snapshot=JSON.parse(JSON.stringify(rec));saveChain=saveChain.then(()=>req('/rest/v1/attendance_sessions?on_conflict=session_key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({session_key:k,data:snapshot,updated_at:new Date().toISOString()})})).catch(e=>{console.error(e);alert('Attendance could not be saved. Check your connection and try again.');});return saveChain}
-function sessionRecord(ses){let k=key(ses),rec={...(S.attendance[k]||{})};rec.__meta={course:ses.course,type:ses.type,venue:ses.venue||'',date:iso(),takenBy:S.staff.full_name,takenByRole:S.staff.role,lecturer:ses.lecturer||S.staff.full_name,lectureNumber:ses.lectureNumber||1,baseSessionId:ses.baseSessionId||ses.id,cohort:'',savedAt:new Date().toISOString()};return [k,rec]}
+function sessionRecord(ses){let k=key(ses),rec={...(S.attendance[k]||{})};rec.__meta={course:ses.course,type:ses.type,venue:ses.venue||'',date:iso(),takenBy:S.staff.full_name,takenByRole:S.staff.role,lecturer:ses.lecturer||S.staff.full_name,lectureNumber:ses.lectureNumber||1,baseSessionId:ses.baseSessionId||ses.id,cohort:'',pendingLecture:false,savedAt:new Date().toISOString()};return [k,rec]}
 async function audit(action,ses,studentId=null,oldStatus=null,newStatus=null,details={}){
   try{
     await req('/rest/v1/attendance_audit',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({
@@ -61,14 +61,23 @@ function nextLectureNumber(ses){
   for(let n=2;n<=4;n++)if(!used.has(n))return n;
   return null;
 }
-function startAnotherLecture(){
+async function startAnotherLecture(){
   let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses)return;
   let n=nextLectureNumber(ses);if(!n){alert('A maximum of four lecture registers can be recorded for this timetable block.');return}
   let lecturer=prompt('Lecturer for Lecture '+n+':',ses.lecturer||S.staff.full_name);
   if(lecturer===null)return;lecturer=lecturer.trim();if(!lecturer){alert('Please enter the lecturer name.');return}
-  let base=ses.baseSessionId||ses.id,id=base+'__L'+n;
+  let base=ses.baseSessionId||ses.id,id=base+'__L'+n,k=iso()+'__'+id;
+  let newSes={...ses,id,lectureNumber:n,baseSessionId:base,lecturer,multiLecture:true};
   S.multiSessions=S.multiSessions||{};S.multiSessions[id]={lecturer};
-  S.selected=id;S.rollSession=id;S.rollIndex=0;S.undo=null;renderRoll();
+  let rec={__meta:{course:ses.course,type:'Lecture',venue:ses.venue||'',date:iso(),takenBy:S.staff.full_name,takenByRole:S.staff.role,lecturer,lectureNumber:n,baseSessionId:base,pendingLecture:true,savedAt:new Date().toISOString()}};
+  try{
+    await req('/rest/v1/attendance_sessions?on_conflict=session_key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({session_key:k,data:rec,updated_at:new Date().toISOString()})});
+    S.attendance[k]=rec;
+    S.selected=id;S.rollSession=id;S.rollIndex=0;S.undo=null;renderRoll();
+  }catch(e){
+    delete S.multiSessions[id];
+    alert('Could not start the next lecture: '+e.message);
+  }
 }
 
 function lectureWeight(rec){let w=Number(rec?.__meta?.lectureWeight||1);return Number.isFinite(w)&&w>0?w:1}
