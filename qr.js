@@ -39,7 +39,7 @@ async function recoverQrSession(){
   let ses=visibleSessions().find(x=>x.id===rollSessionId);
   if(!ses)return;
   S.selected=rollSessionId;S.rollSession=rollSessionId;
-  S.qrActive={sessionId:q.id,sessionKey:q.session_key,rollSessionId,token:q.token,windowExpiresAt:q.window_expires_at,tokenExpiresAt:q.token_expires_at,checkedIn:q.checked_in||0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
+  S.qrActive={sessionId:q.id,sessionKey:q.session_key,rollSessionId,sessionType:ses.type,token:q.token,windowExpiresAt:q.window_expires_at,tokenExpiresAt:q.token_expires_at,checkedIn:q.checked_in||0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
   if(q.status==='expired'||Date.now()>=new Date(q.window_expires_at).getTime()){
     S.qrActive.finishing=true;
     await finishQrWindow(true);
@@ -47,7 +47,7 @@ async function recoverQrSession(){
 }
 
 function qrCheckinUrl(q){
-  return location.origin+'/checkin.html?sid='+encodeURIComponent(q.sessionId)+'&token='+encodeURIComponent(q.token);
+  return location.origin+'/checkin.html?sid='+encodeURIComponent(q.sessionId)+'&token='+encodeURIComponent(q.token)+'&type='+encodeURIComponent(q.sessionType||'Lecture');
 }
 function renderQrCode(){
   let el=document.getElementById('qrCodeBox');
@@ -76,7 +76,7 @@ async function startQrCheckin(){
   if(!confirm('Start a fresh 5-minute rotating QR for '+courseLabel(ses.course)+' · '+what+'?\n\n'+(String(ses.type||'').toLowerCase()==='practical'?'Students will enter matric number + Group A/B + surname.':'Students will enter matric number + surname.')+' After 5 minutes, only students who did not check in will appear for manual roll call.'))return;
   try{
     let b=await qrPost({action:'create',session_key:key(ses),course:ses.course,session_type:ses.type,session_date:iso(),lecturer,venue:ses.venue||''});
-    S.qrActive={sessionId:b.session_id,sessionKey:key(ses),rollSessionId:ses.id,token:b.token,windowExpiresAt:b.window_expires_at,tokenExpiresAt:b.token_expires_at,checkedIn:0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
+    S.qrActive={sessionId:b.session_id,sessionKey:key(ses),rollSessionId:ses.id,sessionType:ses.type,token:b.token,windowExpiresAt:b.window_expires_at,tokenExpiresAt:b.token_expires_at,checkedIn:0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
     S.qrManual=null;S.rollIndex=0;
     startQrTicker();renderRoll();
   }catch(e){alert('Could not start QR attendance: '+e.message)}
@@ -129,7 +129,8 @@ function clearQrResidualView(){
 }
 function qrCardHtml(ses){
   if(S.qrActive&&S.qrActive.rollSessionId===ses.id){
-    return `<div class="card qr-card"><div class="top"><div><b>5-minute rotating QR check-in</b><div class="muted">Students enter matric number + surname. QR refreshes automatically.</div></div><div class="qr-timer" id="qrTimer">05:00</div></div><div class="qr-layout"><div id="qrCodeBox" class="qr-box"></div><div><div class="qr-count" id="qrCount">${S.qrActive.checkedIn||0} checked in</div><div class="muted" style="margin-top:8px">Keep this screen visible to the class. Old QR codes expire quickly.</div><button class="btn light" style="margin-top:12px" onclick="finishQrWindow(false)">End QR phase now</button></div></div></div>`;
+    let practical=String(ses.type||'').toLowerCase()==='practical';
+    return `<div class="card qr-card"><div class="top"><div><b>5-minute rotating QR check-in</b><div class="muted">${practical?'Students enter matric number + Group A/B + surname.':'Students enter matric number + surname.'} QR refreshes automatically.</div></div><div class="qr-timer" id="qrTimer">05:00</div></div><div class="qr-layout"><div id="qrCodeBox" class="qr-box"></div><div><div class="qr-count" id="qrCount">${S.qrActive.checkedIn||0} checked in</div><div class="muted" style="margin-top:8px">Keep this screen visible to the class. Old QR codes expire quickly.</div><button class="btn light" style="margin-top:12px" onclick="finishQrWindow(false)">End QR phase now</button></div></div></div>`;
   }
   if(S.qrManual&&S.qrManual.sessionId===ses.id){
     return `<div class="card qr-card"><b>QR phase complete</b><div class="muted" style="margin-top:5px">${S.qrManual.qrCheckedIn} students checked in by QR. The roll call below contains only the ${S.qrManual.ids.length} students who did not scan successfully.</div><button class="btn light" style="margin-top:10px" onclick="clearQrResidualView()">Show full register</button></div>`;
