@@ -13,7 +13,11 @@ roster=function(session){
 };
 
 function qrEligible(ses){
-  return !!(ses&&String(ses.type||'').toLowerCase()==='lecture'&&['lecturer','hod','admin'].includes(S.staff?.role));
+  if(!ses)return false;
+  const kind=String(ses.type||'').toLowerCase();
+  if(!['lecture','practical'].includes(kind))return false;
+  if(S.staff?.role==='lab_scientist')return kind==='practical';
+  return ['lecturer','hod','admin'].includes(S.staff?.role);
 }
 async function qrPost(body){
   let r=await authedFetch(URL+'/functions/v1/qr-attendance-session',{
@@ -68,9 +72,10 @@ async function startQrCheckin(){
     return;
   }
   let lecturer=ses.lecturer||S.staff.full_name;
-  if(!confirm('Start a 5-minute rotating QR check-in for '+courseLabel(ses.course)+'?\n\nStudents will enter matric number + surname. After 5 minutes, only students who did not check in will appear for manual roll call.'))return;
+  let what=String(ses.type||'').toLowerCase()==='practical'?'Practical '+(ses.practicalNumber||1):'Lecture '+(ses.lectureNumber||1);
+  if(!confirm('Start a fresh 5-minute rotating QR for '+courseLabel(ses.course)+' · '+what+'?\n\n'+(String(ses.type||'').toLowerCase()==='practical'?'Students will enter matric number + Group A/B + surname.':'Students will enter matric number + surname.')+' After 5 minutes, only students who did not check in will appear for manual roll call.'))return;
   try{
-    let b=await qrPost({action:'create',session_key:key(ses),course:ses.course,session_type:'Lecture',session_date:iso(),lecturer,venue:ses.venue||''});
+    let b=await qrPost({action:'create',session_key:key(ses),course:ses.course,session_type:ses.type,session_date:iso(),lecturer,venue:ses.venue||''});
     S.qrActive={sessionId:b.session_id,sessionKey:key(ses),rollSessionId:ses.id,token:b.token,windowExpiresAt:b.window_expires_at,tokenExpiresAt:b.token_expires_at,checkedIn:0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
     S.qrManual=null;S.rollIndex=0;
     startQrTicker();renderRoll();
@@ -130,7 +135,8 @@ function qrCardHtml(ses){
     return `<div class="card qr-card"><b>QR phase complete</b><div class="muted" style="margin-top:5px">${S.qrManual.qrCheckedIn} students checked in by QR. The roll call below contains only the ${S.qrManual.ids.length} students who did not scan successfully.</div><button class="btn light" style="margin-top:10px" onclick="clearQrResidualView()">Show full register</button></div>`;
   }
   let rec=S.attendance[key(ses)]||{},marked=_qrBaseRoster(ses).filter(st=>rec[st.id]).length;
-  return `<div class="card qr-card"><div class="top"><div><b>Attendance method</b><div class="muted">Use normal manual roll call below, or let students self-check-in for 5 minutes.</div></div><button class="btn primary" ${marked?'disabled title="QR must be started before manual marks are entered"':''} onclick="startQrCheckin()">Start 5-minute QR</button></div><div class="muted" style="margin-top:8px">QR check-in verifies matric number + surname. After 5 minutes, only students who did not check in are shown for manual marking.</div></div>`;
+  let practical=String(ses.type||'').toLowerCase()==='practical';
+  return `<div class="card qr-card"><div class="top"><div><b>Attendance method</b><div class="muted">Use manual roll call or a fresh 5-minute QR for this ${practical?'practical':'lecture'}.</div></div><button class="btn primary" ${marked?'disabled title="QR must be started before manual marks are entered"':''} onclick="startQrCheckin()">Start 5-minute QR</button></div><div class="muted" style="margin-top:8px">${practical?'Students enter matric number + Group A/B + surname.':'Students enter matric number + surname.'} After 5 minutes, only students who did not check in are shown for manual marking.</div></div>`;
 }
 
 const _qrBaseRenderRoll=renderRoll;
