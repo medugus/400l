@@ -120,8 +120,9 @@ function renderHelp(){
   <div class="help-grid">
     <div class="help-card"><span>1</span><div><b>Take attendance</b><p>Open <b>Take Attendance</b> and select the correct class.</p></div></div>
     <div class="help-card"><span>2</span><div><b>Choose Manual or QR</b><p>Manual goes through students one at a time. QR runs for 5 minutes.</p></div></div>
-    <div class="help-card"><span>3</span><div><b>Using QR</b><p>Keep the browser open. Students scan, then enter matric number and surname.</p></div></div>
-    <div class="help-card"><span>4</span><div><b>After 5 minutes</b><p>Only students who did not check in appear for manual roll call.</p></div></div>
+    <div class="help-card"><span>3</span><div><b>Using QR</b><p>Keep the browser open. For lectures, students enter matric number + surname. For practicals, they enter matric number + Group A/B + surname.</p></div></div>
+    <div class="help-card"><span>4</span><div><b>Practical sessions</b><p>Afternoon practical blocks have Practical 1 and Practical 2. Each has its own fresh QR; students can check into both as groups switch.</p></div></div>
+    <div class="help-card"><span>5</span><div><b>After 5 minutes</b><p>Only students who did not check in appear for manual roll call.</p></div></div>
     <div class="help-card"><span>5</span><div><b>Several lectures in one block</b><p>Use 1, 2 or 4 attendance checks, then tap <b>Finish block / set equivalence</b>.</p></div></div>
     <div class="help-card"><span>6</span><div><b>Correct a mistake</b><p>Use <b>Undo</b> immediately after an incorrect mark.</p></div></div>
     <div class="help-card"><span>7</span><div><b>Reports</b><p>Open <b>Reports</b> for cumulative attendance and Excel downloads.</p></div></div>
