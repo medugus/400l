@@ -13,11 +13,13 @@ function visibleSessions(){
   let out=[];
   S.multiSessions=S.multiSessions||{};
   for(let base of t){
-    out.push({...base,lectureNumber:1,baseSessionId:base.id,lecturer:(S.attendance[today+'__'+base.id]?.__meta?.lecturer||'')});
-    if(String(base.type||'').toLowerCase()!=='lecture')continue;
+    const isLecture=String(base.type||'').toLowerCase()==='lecture';
+    const isMorning=isLecture && String(base.start||'')<'12:00';
+    out.push({...base,lectureNumber:isLecture?1:null,baseSessionId:base.id,lecturer:(S.attendance[today+'__'+base.id]?.__meta?.lecturer||'')});
+    if(!isLecture)continue;
     for(let n=2;n<=4;n++){
       let id=base.id+'__L'+n,k=today+'__'+id,persisted=S.attendance[k],temp=S.multiSessions[id];
-      if(persisted||temp){
+      if(isMorning||persisted||temp){
         out.push({...base,id,lectureNumber:n,baseSessionId:base.id,lecturer:(persisted?.__meta?.lecturer||temp?.lecturer||''),multiLecture:true});
       }
     }
