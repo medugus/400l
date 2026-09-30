@@ -1,5 +1,5 @@
 function reportData(){
-  let students=S.state.students||[],{per,avg}=calc(),keys=Object.keys(S.attendance).sort(),completeKeys=keys.filter(k=>registerIsComplete(S.attendance[k])),courseNames=[...new Set(completeKeys.map(k=>S.attendance[k].__meta?.course).filter(Boolean))],threshold=S.state.settings?.threshold||75;
+  let students=S.state.students||[],{per,avg}=calc(),keys=Object.keys(S.attendance).filter(k=>!k.startsWith('TEST__')).sort(),completeKeys=keys.filter(k=>registerIsComplete(S.attendance[k])),courseNames=[...new Set(completeKeys.map(k=>S.attendance[k].__meta?.course).filter(Boolean))],threshold=S.state.settings?.threshold||75;
   let ov=[['Nile University FBCS Roll Call'],['Generated',new Date().toLocaleString()],['Students',students.length],['Registers',keys.length],['Average attendance',avg==null?'':avg+'%'],['Threshold',threshold+'%']];
   let list=[['ID','Name'],...students.map(x=>[x.id,x.name])];
   let matrix=[['ID','Name',...keys.map(k=>{let m=S.attendance[k].__meta||{};return`${m.date||''} ${m.course||''} ${m.type||''}${m.outOfTimetable?' [OUT OF TIMETABLE]':''}`})],...students.map(st=>[st.id,st.name,...keys.map(k=>markLabel(S.attendance[k][st.id]))])];
