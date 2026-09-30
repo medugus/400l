@@ -31,11 +31,12 @@ async function qrPost(body){
 }
 async function recoverQrSession(){
   if(!S.session||!S.staff)return;
-  let b=await qrPost({action:'recover',session_date:iso()});
+  let b=await qrPost({action:'recover',session_date:iso(),test_mode:!!S.testMode});
   let q=b.session;if(!q)return;
-  let prefix=iso()+'__';
-  if(!String(q.session_key||'').startsWith(prefix))return;
-  let rollSessionId=String(q.session_key).slice(prefix.length);
+  let realPrefix=iso()+'__',testPrefix='TEST__'+(S.session?.user?.id||'')+'__'+iso()+'__',rawKey=String(q.session_key||''),rollSessionId='';
+  if(rawKey.startsWith(testPrefix)){S.testMode=true;localStorage.setItem('nile_rollcall_testmode','1');rollSessionId=rawKey.slice(testPrefix.length)}
+  else if(rawKey.startsWith(realPrefix)){if(S.testMode)return;rollSessionId=rawKey.slice(realPrefix.length)}
+  else return;
   let ses=visibleSessions().find(x=>x.id===rollSessionId);
   if(!ses)return;
   S.selected=rollSessionId;S.rollSession=rollSessionId;
@@ -47,7 +48,7 @@ async function recoverQrSession(){
 }
 
 function qrCheckinUrl(q){
-  return location.origin+'/checkin.html?sid='+encodeURIComponent(q.sessionId)+'&token='+encodeURIComponent(q.token)+'&type='+encodeURIComponent(q.sessionType||'Lecture');
+  return location.origin+'/checkin.html?sid='+encodeURIComponent(q.sessionId)+'&token='+encodeURIComponent(q.token)+'&type='+encodeURIComponent(q.sessionType||'Lecture')+(String(q.sessionKey||'').startsWith('TEST__')?'&test=1':'');
 }
 function renderQrCode(){
   let el=document.getElementById('qrCodeBox');
