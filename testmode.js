@@ -81,11 +81,36 @@ sessionRecord=function(ses){
 
 const _tmRegisterIsComplete=registerIsComplete;
 registerIsComplete=function(rec){
-  if(rec?.__meta?.testMode){
+  const ids=Object.keys(rec||{}).filter(k=>k!=='__meta');
+  if(rec?.__meta?.testMode||ids.some(id=>id.startsWith('TEST'))){
     const target=(S.state.test_students||[]).length;
     return registerMarkCount(rec)===target;
   }
   return _tmRegisterIsComplete(rec);
+};
+
+const _tmBlockRegisterKeys=blockRegisterKeys;
+blockRegisterKeys=function(ses){
+  if(!S.testMode)return _tmBlockRegisterKeys(ses);
+  if(!ses)return[];
+  const base=ses.baseSessionId||ses.id,p=testSessionKeyPrefix(),keys=[];
+  const k1=p+base;if(S.attendance[k1]&&registerIsComplete(S.attendance[k1]))keys.push(k1);
+  for(let n=2;n<=4;n++){let k=p+base+'__L'+n;if(S.attendance[k]&&registerIsComplete(S.attendance[k]))keys.push(k)}
+  return keys;
+};
+
+const _tmStartAnotherLecture=startAnotherLecture;
+startAnotherLecture=async function(){
+  if(!S.testMode)return _tmStartAnotherLecture();
+  let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses)return;
+  let base=ses.baseSessionId||'SANDBOX-AM';
+  for(let n=2;n<=4;n++){
+    let id=base+'__L'+n,k=testSessionKeyPrefix()+id;
+    if(!S.attendance[k]||!registerIsComplete(S.attendance[k])){
+      S.selected=id;S.rollSession=id;S.rollIndex=0;S.undo=null;renderRoll();return;
+    }
+  }
+  alert('All four test lecture registers are already available.');
 };
 
 const _tmAudit=audit;
