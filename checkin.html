@@ -28,11 +28,14 @@
 <button id="btn" class="btn">Check in</button>
 </form>
 <div id="msg"></div>
-</div><div class="brand">This check-in records the time and attendance method.</div></div>
+</div><div class="brand">One student per phone/browser per attendance register. Genuine shared-device cases should be handled by the lecturer.</div></div>
 <script>
 const URL='https://ktlynfdhhfwqnhtkgauy.supabase.co';
 const KEY='sb_publishable_5rmnEy05iKgq7bcCHYfQzw_Anumymr5';
 const p=new URLSearchParams(location.search),sid=p.get('sid'),token=p.get('token'),type=p.get('type')||'Lecture';
+const DEVICE_KEY='fbcs_rollcall_device_v1';
+let deviceId=localStorage.getItem(DEVICE_KEY);
+if(!deviceId){deviceId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,deviceId)}
 const msg=document.getElementById('msg'),form=document.getElementById('f'),btn=document.getElementById('btn'),groupWrap=document.getElementById('groupWrap'),groupEl=document.getElementById('group');
 if(String(type).toLowerCase()!=='practical'){groupWrap.style.display='none';groupEl.value='';}
 function show(kind,text){msg.className=kind;msg.textContent=text}
@@ -44,7 +47,7 @@ form?.addEventListener('submit',async e=>{
    const r=await fetch(URL+'/functions/v1/student-qr-checkin',{
      method:'POST',
      headers:{'Content-Type':'application/json','apikey':KEY},
-     body:JSON.stringify({session_id:sid,token,student_id:document.getElementById('matric').value.trim(),group:document.getElementById('group').value,surname:document.getElementById('surname').value.trim()})
+     body:JSON.stringify({session_id:sid,token,student_id:document.getElementById('matric').value.trim(),group:document.getElementById('group').value,surname:document.getElementById('surname').value.trim(),device_id:deviceId})
    });
    const b=await r.json();
    if(!r.ok)throw Error(b.error||'Check-in failed');
