@@ -4,15 +4,41 @@ async function fetchAdminStaff(){
 }
 async function loadAdminPanel(){
   try{
-    let [staff,auditRows]=await Promise.all([
+    let [staff,auditRows,deviceRows]=await Promise.all([
       fetchAdminStaff(),
-      req('/rest/v1/attendance_audit?select=actor_name,action,session_key,course,student_id,old_status,new_status,details,created_at&order=created_at.desc&limit=100')
+      req('/rest/v1/attendance_audit?select=actor_name,action,session_key,course,student_id,old_status,new_status,details,created_at&order=created_at.desc&limit=100'),
+      fetchStudentDevices()
     ]);
-    S.adminAudit=auditRows||[];renderStaffAdmin();renderAuditAdmin();renderManualAdmin();
+    S.adminAudit=auditRows||[];S.studentDevices=deviceRows||[];renderStaffAdmin();renderAuditAdmin();renderManualAdmin();renderStudentDevices();
   }catch(e){
     let a=$('#staffAdmin');if(a)a.innerHTML='<div class="muted">Could not load staff access: '+esc(e.message)+'</div>';
   }
 }
+
+async function fetchStudentDevices(){
+  let r=await authedFetch(URL+'/functions/v1/student-device-admin',{headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`}});
+  let b=await r.json();if(!r.ok)throw Error(b.error||'Could not load student devices');return b.bindings||[]
+}
+function renderStudentDevices(filter=''){
+  let el=$('#deviceAdmin');if(!el)return;
+  let rows=S.studentDevices||[],q=String(filter||'').trim().toLowerCase();
+  if(q)rows=rows.filter(x=>String(x.student_id).toLowerCase().includes(q)||String(x.student_name||'').toLowerCase().includes(q));
+  el.innerHTML=`<div class="top"><div><b>Student registered devices</b><div class="muted">One student ↔ one phone/browser for the 2026–2027 session. Reset only when a student genuinely changes device.</div></div></div>
+  <div style="margin-top:10px"><input id="deviceSearch" placeholder="Search matric number or name" value="${esc(filter)}" oninput="renderStudentDevices(this.value)"></div>
+  <div class="muted" style="margin:8px 0">${(S.studentDevices||[]).length} student device${(S.studentDevices||[]).length===1?'':'s'} registered</div>
+  <div class="scroll"><table class="table"><tr><th>Matric</th><th>Student</th><th>Registered</th><th>Last used</th><th></th></tr>
+  ${rows.length?rows.map(x=>`<tr><td>${esc(x.student_id)}</td><td>${esc(x.student_name||'')}</td><td>${x.bound_at?esc(new Date(x.bound_at).toLocaleString()):''}</td><td>${x.last_seen_at?esc(new Date(x.last_seen_at).toLocaleString()):''}</td><td><button class="btn danger" onclick="resetStudentDevice('${esc(x.student_id)}','${esc(x.student_name||'')}')">Reset device</button></td></tr>`).join(''):'<tr><td colspan="5" class="muted">No matching registered devices.</td></tr>'}
+  </table></div>`
+}
+async function resetStudentDevice(studentId,name){
+  if(!confirm('Reset registered device for '+(name||studentId)+'?\n\nTheir current phone/browser will stop being recognised. The next successful QR check-in will register the new device. Attendance records are not deleted.'))return;
+  try{
+    let r=await authedFetch(URL+'/functions/v1/student-device-admin',{method:'POST',headers:{apikey:KEY,Authorization:`Bearer ${S.session?.access_token||''}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reset',student_id:studentId})});
+    let b=await r.json();if(!r.ok)throw Error(b.error||'Could not reset device');
+    S.studentDevices=await fetchStudentDevices();renderStudentDevices();alert('Device reset for '+(b.student_name||studentId)+'. Their next successful QR check-in will register the new phone/browser.');
+  }catch(e){alert(e.message)}
+}
+
 function copyStaffCode(code,name){
   if(!code)return;
   let text=String(code);
@@ -151,6 +177,7 @@ function renderAdmin(){
   v.innerHTML=`<div class="card"><b>Admin overview</b><div class="muted" style="margin-top:5px">${st.length} students · ${t.length} recurring teaching blocks · ${ex.length} excluded self-study/break/exam dates.</div></div>
   <div class="card"><b>Academic timetable used for roll call</b><div class="muted" style="margin:5px 0 10px">Department/date/time blocks are based on the submitted 400-level schedule. Specific lecture topics are not required.</div><div class="scroll"><table class="table"><tr><th>Course</th><th>Day</th><th>Time</th><th>Type</th><th>Period</th></tr>${t.map(x=>`<tr><td>${esc(courseLabel(x.course))}</td><td>${days[x.day]}</td><td>${esc(x.start)}–${esc(x.end)}</td><td>${esc(x.type)}</td><td>${esc(x.validFrom||'')} – ${esc(x.validTo||'')}</td></tr>`).join('')}</table></div></div>
   <div class="card" id="manualAdmin"><div class="muted">Loading manual attendance entry…</div></div>
+  <div class="card" id="deviceAdmin"><div class="muted">Loading registered student devices…</div></div>
   <div class="card" id="staffAdmin"><div class="muted">Loading staff access codes…</div></div>
   <div class="card"><b>Audit trail</b><div class="muted">Marks, undo actions, restarts, code resets and account status changes.</div><div id="auditAdmin" class="scroll" style="margin-top:10px"><div class="muted">Loading audit trail…</div></div></div>
   <div class="card"><b>Student list</b><div class="scroll"><table class="table"><tr><th>Matric</th><th>Name</th></tr>${st.map(x=>`<tr><td>${esc(x.id)}</td><td>${esc(x.name)}</td></tr>`).join('')}</table></div></div>`;
