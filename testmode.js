@@ -137,6 +137,18 @@ calc=function(){
   return {per,avg};
 };
 
+const _tmRenderRoll=renderRoll;
+renderRoll=function(){
+  _tmRenderRoll();
+  if(!S.testMode)return;
+  let v=$('#view');if(!v||v.querySelector('.test-credentials'))return;
+  let students=S.state.test_students||[];
+  let box=document.createElement('div');box.className='card test-credentials';
+  box.style.border='2px dashed #f59e0b';
+  box.innerHTML='<b>TEST student credentials</b><div class="muted" style="margin:4px 0 8px">Use these only in Test Mode. For practicals also choose Group A or B.</div><div class="scroll"><table class="table"><tr><th>Matric</th><th>Name</th><th>Surname entry</th></tr>'+students.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.name)+'</td><td><b>'+esc(String(x.name||'').split(/\\s+/)[0])+'</b></td></tr>').join('')+'</table></div>';
+  v.insertAdjacentElement('afterbegin',box);
+};
+
 const _tmRenderHome=renderHome;
 renderHome=function(){
   _tmRenderHome();
