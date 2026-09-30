@@ -12,7 +12,7 @@
 </head>
 <body><div class="wrap"><div class="card">
 <div class="muted">Nile University · FBCS Roll Call</div>
-<div class="title">Student attendance check-in</div>
+<div class="title">Student attendance check-in</div><div id="testNotice"></div>
 <div class="muted">Enter your own details. Your first successful check-in registers this phone/browser to you for the 2026–2027 session.</div>
 <form id="f">
 <label>Matric number</label>
@@ -32,12 +32,13 @@
 <script>
 const URL='https://ktlynfdhhfwqnhtkgauy.supabase.co';
 const KEY='sb_publishable_5rmnEy05iKgq7bcCHYfQzw_Anumymr5';
-const p=new URLSearchParams(location.search),sid=p.get('sid'),token=p.get('token'),type=p.get('type')||'Lecture';
+const p=new URLSearchParams(location.search),sid=p.get('sid'),token=p.get('token'),type=p.get('type')||'Lecture',isTest=p.get('test')==='1';
 const DEVICE_KEY='fbcs_rollcall_device_v1';
 let deviceId=localStorage.getItem(DEVICE_KEY);
 if(!deviceId){deviceId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,deviceId)}
 const msg=document.getElementById('msg'),form=document.getElementById('f'),btn=document.getElementById('btn'),groupWrap=document.getElementById('groupWrap'),groupEl=document.getElementById('group');
 if(String(type).toLowerCase()!=='practical'){groupWrap.style.display='none';groupEl.value='';}
+if(isTest){const n=document.getElementById('testNotice');n.className='ok';n.style.marginTop='10px';n.textContent='TEST MODE — this does not count as real attendance. Use a TEST matric number shown by the lecturer.';}
 function show(kind,text){msg.className=kind;msg.textContent=text}
 if(!sid||!token){form.style.display='none';show('err','This attendance link is incomplete. Please scan the current QR code again.')}
 form?.addEventListener('submit',async e=>{
