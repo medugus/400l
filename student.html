@@ -21,12 +21,13 @@
 <form id="f">
 <label>Current class code</label>
 <input id="classcode" class="code" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="10-character code" required>
-<label>Matric number</label>
+<div id="identityBox"></div>
+<div id="identityEntry"><label>Matric number</label>
 <input id="matric" autocomplete="off" required>
+<label>Surname</label>
+<input id="surname" autocomplete="family-name" required></div>
 <label>Group <span class="muted">(practicals only)</span></label>
 <select id="group"><option value="">Not a practical / select if required</option><option value="A">Group A</option><option value="B">Group B</option></select>
-<label>Surname</label>
-<input id="surname" autocomplete="family-name" required>
 <button id="btn" class="btn">Check in</button>
 </form>
 <div id="msg"></div>
@@ -37,9 +38,21 @@
 const URL='https://ktlynfdhhfwqnhtkgauy.supabase.co';
 const KEY='sb_publishable_5rmnEy05iKgq7bcCHYfQzw_Anumymr5';
 const DEVICE_KEY='fbcs_rollcall_student_app_device_v1';
+const ID_KEY='fbcs_rollcall_student_identity_v1';
 let deviceId=localStorage.getItem(DEVICE_KEY);
 if(!deviceId){deviceId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,deviceId)}
-const form=document.getElementById('f'),btn=document.getElementById('btn'),msg=document.getElementById('msg'),installBox=document.getElementById('installBox');
+const form=document.getElementById('f'),btn=document.getElementById('btn'),msg=document.getElementById('msg'),installBox=document.getElementById('installBox'),identityBox=document.getElementById('identityBox'),identityEntry=document.getElementById('identityEntry');
+let savedIdentity=null;try{savedIdentity=JSON.parse(localStorage.getItem(ID_KEY)||'null')}catch{}
+function renderIdentity(){
+  if(savedIdentity?.student_id&&savedIdentity?.surname){
+    identityBox.innerHTML='<div class="ok"><b>Registered student</b><div style="margin-top:4px">'+savedIdentity.student_name+' · '+savedIdentity.student_id+'</div><div class="muted" style="margin-top:5px">This app is locked to this student. An administrator must reset the device before another student can use it.</div></div>';
+    identityEntry.classList.add('hidden');
+    document.getElementById('matric').required=false;document.getElementById('surname').required=false;
+  }else{
+    identityBox.innerHTML='<div class="muted" style="margin-top:12px">First use: enter your matric number and surname. After a successful check-in, this app will remember your identity.</div>';
+    identityEntry.classList.remove('hidden');
+  }
+}
 const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
 const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
 let installPrompt=null;
@@ -57,6 +70,7 @@ function renderInstall(){
   }
 }
 renderInstall();
+renderIdentity();
 form.addEventListener('submit',async e=>{
  e.preventDefault();
  if(!standalone){show('err','Attendance must be submitted from the installed FBCS Student app.');return}
@@ -67,16 +81,17 @@ form.addEventListener('submit',async e=>{
      headers:{'Content-Type':'application/json','apikey':KEY},
      body:JSON.stringify({
        session_code:document.getElementById('classcode').value.trim(),
-       student_id:document.getElementById('matric').value.trim(),
+       student_id:savedIdentity?.student_id||document.getElementById('matric').value.trim(),
        group:document.getElementById('group').value,
-       surname:document.getElementById('surname').value.trim(),
+       surname:savedIdentity?.surname||document.getElementById('surname').value.trim(),
        device_id:deviceId
      })
    });
    const b=await r.json();
    if(!r.ok)throw Error(b.error||'Check-in failed');
+   if(!savedIdentity){savedIdentity={student_id:document.getElementById('matric').value.trim(),surname:document.getElementById('surname').value.trim(),student_name:b.student_name};localStorage.setItem(ID_KEY,JSON.stringify(savedIdentity));renderIdentity();}
    show('ok',b.already_checked_in?'You are already checked in for this register.':'Attendance recorded successfully for '+b.student_name+'.');
-   document.getElementById('classcode').value='';
+   document.getElementById('classcode').value='';document.getElementById('group').value='';
  }catch(e){show('err',e.message)}
  finally{btn.disabled=false;btn.textContent='Check in'}
 });
