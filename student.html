@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FBCS Student Roll Call</title>
+<link rel="manifest" href="/student-manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FBCS Student">
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0f172a;background:#f1f5f9}*{box-sizing:border-box}body{margin:0}.wrap{max-width:480px;margin:auto;padding:18px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin-top:22px}.muted{color:#64748b;font-size:13px;line-height:1.45}.title{font-size:27px;font-weight:800;margin:6px 0 2px}label{display:block;font-size:12px;color:#475569;margin:14px 0 5px}input,select{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff}.code{text-transform:uppercase;letter-spacing:2px;font-weight:800}.btn{width:100%;border:0;border-radius:10px;padding:13px 16px;font-weight:750;background:#0f172a;color:#fff;margin-top:16px;font-size:16px}.btn.secondary{background:#e2e8f0;color:#0f172a}.btn:disabled{opacity:.55}.ok{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:12px;padding:14px;margin-top:16px}.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:12px;padding:14px;margin-top:16px}.warn{background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:12px;padding:14px;margin-top:16px}.brand{text-align:center;color:#64748b;font-size:11px;margin:18px 0}.steps{margin:8px 0 0;padding-left:20px;color:#334155;font-size:14px}.steps li{margin:7px 0}.hidden{display:none}
+</style>
+</head>
+<body><div class="wrap">
+<div class="card">
+<div class="muted">Nile University · FBCS Roll Call</div>
+<div class="title">Student attendance</div>
+<div class="muted">Use this installed app for every lecture and practical. Your first successful attendance registers this app to your matric number for the 2026–2027 session.</div>
+<div id="installBox"></div>
+<form id="f">
+<label>Current class code</label>
+<input id="classcode" class="code" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="10-character code" required>
+<label>Matric number</label>
+<input id="matric" autocomplete="off" required>
+<label>Group <span class="muted">(practicals only)</span></label>
+<select id="group"><option value="">Not a practical / select if required</option><option value="A">Group A</option><option value="B">Group B</option></select>
+<label>Surname</label>
+<input id="surname" autocomplete="family-name" required>
+<button id="btn" class="btn">Check in</button>
+</form>
+<div id="msg"></div>
+</div>
+<div class="brand">One installed app per student. If you replace your phone or reinstall the app, an administrator must reset your registered device.</div>
+</div>
+<script>
+const URL='https://ktlynfdhhfwqnhtkgauy.supabase.co';
+const KEY='sb_publishable_5rmnEy05iKgq7bcCHYfQzw_Anumymr5';
+const DEVICE_KEY='fbcs_rollcall_student_app_device_v1';
+let deviceId=localStorage.getItem(DEVICE_KEY);
+if(!deviceId){deviceId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,deviceId)}
+const form=document.getElementById('f'),btn=document.getElementById('btn'),msg=document.getElementById('msg'),installBox=document.getElementById('installBox');
+const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+let installPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;renderInstall()});
+window.addEventListener('appinstalled',()=>location.reload());
+function show(kind,text){msg.className=kind;msg.textContent=text}
+function renderInstall(){
+  if(standalone){installBox.innerHTML='<div class="ok">Installed app detected. Use this app for attendance each time.</div>';btn.disabled=false;return}
+  btn.disabled=true;
+  if(isiOS){
+    installBox.innerHTML='<div class="warn"><b>Install before checking in.</b><ol class="steps"><li>Open this page in Safari.</li><li>Tap Share.</li><li>Tap Add to Home Screen.</li><li>Open FBCS Student from your Home Screen.</li></ol></div>';
+  }else{
+    installBox.innerHTML='<div class="warn"><b>Install before checking in.</b><div class="muted" style="margin-top:6px">Open this page in Chrome, then install FBCS Student. Attendance is accepted from the installed app.</div><button id="installBtn" class="btn secondary" type="button">Install FBCS Student</button></div>';
+    setTimeout(()=>{const b=document.getElementById('installBtn');if(b)b.onclick=async()=>{if(installPrompt){installPrompt.prompt();await installPrompt.userChoice}else alert('Use Chrome menu → Install app / Add to Home screen.')}})
+  }
+}
+renderInstall();
+form.addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(!standalone){show('err','Attendance must be submitted from the installed FBCS Student app.');return}
+ btn.disabled=true;btn.textContent='Checking…';msg.className='';msg.textContent='';
+ try{
+   const r=await fetch(URL+'/functions/v1/student-qr-checkin',{
+     method:'POST',
+     headers:{'Content-Type':'application/json','apikey':KEY},
+     body:JSON.stringify({
+       session_code:document.getElementById('classcode').value.trim(),
+       student_id:document.getElementById('matric').value.trim(),
+       group:document.getElementById('group').value,
+       surname:document.getElementById('surname').value.trim(),
+       device_id:deviceId
+     })
+   });
+   const b=await r.json();
+   if(!r.ok)throw Error(b.error||'Check-in failed');
+   show('ok',b.already_checked_in?'You are already checked in for this register.':'Attendance recorded successfully for '+b.student_name+'.');
+   document.getElementById('classcode').value='';
+ }catch(e){show('err',e.message)}
+ finally{btn.disabled=false;btn.textContent='Check in'}
+});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/student-sw.js').catch(()=>{});
+</script>
+</body></html>
