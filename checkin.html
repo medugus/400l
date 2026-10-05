@@ -13,7 +13,7 @@
 <body><div class="wrap"><div class="card">
 <div class="muted">Nile University · FBCS Roll Call</div>
 <div class="title">Student attendance check-in</div><div id="testNotice"></div>
-<div class="muted">Enter your own details. Your first successful check-in registers this phone/browser to you for the 2026–2027 session.</div>
+<div class="muted">Use the same Chrome or Edge browser for every attendance check-in. Your first successful check-in registers that browser to you for the 2026–2027 session.</div><div id="browserNotice"></div>
 <form id="f">
 <label>Matric number</label>
 <input id="matric" autocomplete="off" required>
@@ -28,7 +28,7 @@
 <button id="btn" class="btn">Check in</button>
 </form>
 <div id="msg"></div>
-</div><div class="brand">One student per registered phone/browser for the academic session. If you change phone, ask an administrator to reset your registered device.</div></div>
+</div><div class="brand">One student per registered browser for the academic session. Choose Chrome or Edge and keep using the same one. If you change phone or browser, ask an administrator for a one-time device reset.</div></div>
 <script>
 const URL='https://ktlynfdhhfwqnhtkgauy.supabase.co';
 const KEY='sb_publishable_5rmnEy05iKgq7bcCHYfQzw_Anumymr5';
@@ -36,9 +36,15 @@ const p=new URLSearchParams(location.search),sid=p.get('sid'),token=p.get('token
 const DEVICE_KEY='fbcs_rollcall_device_v1';
 let deviceId=localStorage.getItem(DEVICE_KEY);
 if(!deviceId){deviceId=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,deviceId)}
-const msg=document.getElementById('msg'),form=document.getElementById('f'),btn=document.getElementById('btn'),groupWrap=document.getElementById('groupWrap'),groupEl=document.getElementById('group');
+const msg=document.getElementById('msg'),form=document.getElementById('f'),btn=document.getElementById('btn'),groupWrap=document.getElementById('groupWrap'),groupEl=document.getElementById('group'),browserNotice=document.getElementById('browserNotice');
+const ua=navigator.userAgent||'';
+const isChrome=/Chrome\//.test(ua)||/CriOS\//.test(ua);
+const isEdge=/Edg\//.test(ua)||/EdgA\//.test(ua)||/EdgiOS\//.test(ua);
+const supportedBrowser=isChrome||isEdge;
+const browserName=isEdge?'Edge':isChrome?'Chrome':'unsupported browser';
 if(String(type).toLowerCase()!=='practical'){groupWrap.style.display='none';groupEl.value='';}
 if(isTest){const n=document.getElementById('testNotice');n.className='ok';n.style.marginTop='10px';n.textContent='TEST MODE — this does not count as real attendance. Use a TEST matric number shown by the lecturer.';}
+if(supportedBrowser){browserNotice.className='ok';browserNotice.textContent='Browser detected: '+browserName+'. Keep using this same browser for all future attendance.';}else{browserNotice.className='err';browserNotice.innerHTML='<b>Open this QR in Chrome or Edge.</b><br>Choose one browser and keep using that same browser for every class. If your phone opened Safari or an in-app browser, set Chrome or Edge as your default browser, then scan the current QR again.';form.style.display='none';}
 function show(kind,text){msg.className=kind;msg.textContent=text}
 if(!sid||!token){form.style.display='none';show('err','This attendance link is incomplete. Please scan the current QR code again.')}
 form?.addEventListener('submit',async e=>{
