@@ -47,7 +47,6 @@ async function recoverQrSession(){
   }else startQrTicker();
 }
 
-function qrClassCode(token){return String(token||'').replace(/[^A-Za-z0-9]/g,'').slice(0,10).toUpperCase()}
 function qrCheckinUrl(q){
   return location.origin+'/checkin.html?sid='+encodeURIComponent(q.sessionId)+'&token='+encodeURIComponent(q.token)+'&type='+encodeURIComponent(q.sessionType||'Lecture')+(String(q.sessionKey||'').startsWith('TEST__')?'&test=1':'');
 }
@@ -65,7 +64,6 @@ function updateQrStatusUi(){
   let m=String(Math.floor(rem/60)).padStart(2,'0'),s=String(rem%60).padStart(2,'0');
   let t=document.getElementById('qrTimer');if(t)t.textContent=m+':'+s;
   let c=document.getElementById('qrCount');if(c)c.textContent=(S.qrActive.checkedIn||0)+' checked in';
-  let code=document.getElementById('qrClassCode');if(code)code.textContent=qrClassCode(S.qrActive.token);
 }
 async function startQrCheckin(){
   let ses=visibleSessions().find(x=>x.id===S.selected);if(!qrEligible(ses))return;
@@ -133,7 +131,7 @@ function clearQrResidualView(){
 function qrCardHtml(ses){
   if(S.qrActive&&S.qrActive.rollSessionId===ses.id){
     let practical=String(ses.type||'').toLowerCase()==='practical';
-    return `<div class="card qr-card"><div class="top"><div><b>5-minute attendance check-in</b><div class="muted">Preferred method: students open the installed FBCS Student Roll Call app and enter the rotating class code. QR remains available during transition.</div></div><div class="qr-timer" id="qrTimer">05:00</div></div><div class="qr-layout"><div id="qrCodeBox" class="qr-box"></div><div><div class="qr-count" id="qrCount">${S.qrActive.checkedIn||0} checked in</div><div style="margin-top:12px;padding:12px;border:2px solid #0f172a;border-radius:12px;text-align:center"><div class="muted">ROTATING CLASS CODE</div><div id="qrClassCode" style="font-size:28px;font-weight:900;letter-spacing:3px;margin-top:4px">${qrClassCode(S.qrActive.token)}</div></div><div class="muted" style="margin-top:8px">The code changes with the QR. Students should use the current code in the installed app.</div><button class="btn light" style="margin-top:12px" onclick="finishQrWindow(false)">End attendance phase now</button></div></div></div>`;
+    return `<div class="card qr-card"><div class="top"><div><b>5-minute rotating QR check-in</b><div class="muted">Students scan the current QR and complete check-in in the same Chrome or Edge browser they registered with.</div></div><div class="qr-timer" id="qrTimer">05:00</div></div><div class="qr-layout"><div id="qrCodeBox" class="qr-box"></div><div><div class="qr-count" id="qrCount">${S.qrActive.checkedIn||0} checked in</div><div class="muted" style="margin-top:8px">Keep this screen visible. The QR refreshes automatically. Students must not switch browsers between classes.</div><button class="btn light" style="margin-top:12px" onclick="finishQrWindow(false)">End QR phase now</button></div></div></div>`;
   }
   if(S.qrManual&&S.qrManual.sessionId===ses.id){
     return `<div class="card qr-card"><b>QR phase complete</b><div class="muted" style="margin-top:5px">${S.qrManual.qrCheckedIn} students checked in by QR. The roll call below contains only the ${S.qrManual.ids.length} students who did not scan successfully.</div><button class="btn light" style="margin-top:10px" onclick="clearQrResidualView()">Show full register</button></div>`;
