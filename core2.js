@@ -17,8 +17,9 @@ function visibleSessions(){
     const isLecture=kind==='lecture';
     const isPractical=kind==='practical';
     const isMorning=isLecture && String(base.start||'')<'12:00';
-    out.push({...base,lectureNumber:isLecture?1:null,practicalNumber:isPractical?1:null,baseSessionId:base.id,lecturer:(S.attendance[today+'__'+base.id]?.__meta?.lecturer||'')});
-    if(isLecture){
+    const atomic=base.atomicSession===true;
+    out.push({...base,lectureNumber:isLecture?1:null,practicalNumber:isPractical?1:null,baseSessionId:base.id,lecturer:(S.attendance[today+'__'+base.id]?.__meta?.lecturer||base.lecturer||'')});
+    if(isLecture&&!atomic){
       for(let n=2;n<=4;n++){
         let id=base.id+'__L'+n,k=today+'__'+id,persisted=S.attendance[k],temp=S.multiSessions[id];
         if(isMorning||persisted||temp){
@@ -26,7 +27,7 @@ function visibleSessions(){
         }
       }
     }
-    if(isPractical){
+    if(isPractical&&!atomic){
       let id=base.id+'__P2',k=today+'__'+id,persisted=S.attendance[k],temp=S.multiSessions[id];
       out.push({...base,id,practicalNumber:2,baseSessionId:base.id,lecturer:(persisted?.__meta?.lecturer||temp?.lecturer||''),multiPractical:true});
     }
