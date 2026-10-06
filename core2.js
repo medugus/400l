@@ -63,7 +63,7 @@ function blockIsFinalized(ses){
   return blockRegisterKeys(ses).some(k=>S.attendance[k]?.__meta?.coverageFinalized===true)
 }
 function nextLectureNumber(ses){
-  if(!ses||String(ses.type||'').toLowerCase()!=='lecture'||blockIsFinalized(ses))return null;
+  if(!ses||ses.atomicSession===true||String(ses.type||'').toLowerCase()!=='lecture'||blockIsFinalized(ses))return null;
   let base=ses.baseSessionId||ses.id,today=iso(),used=new Set([1]);
   for(let n=2;n<=4;n++){
     if(S.attendance[today+'__'+base+'__L'+n]||S.multiSessions?.[base+'__L'+n])used.add(n);
@@ -92,7 +92,7 @@ async function startAnotherLecture(){
 
 function lectureWeight(rec){let w=Number(rec?.__meta?.lectureWeight||1);return Number.isFinite(w)&&w>0?w:1}
 async function finalizeLectureBlock(){
-  let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses||String(ses.type||'').toLowerCase()!=='lecture')return;
+  let ses=visibleSessions().find(x=>x.id===S.selected);if(!ses||ses.atomicSession===true||String(ses.type||'').toLowerCase()!=='lecture')return;
   let keys=blockRegisterKeys(ses),count=keys.length;
   if(![1,2,4].includes(count)){
     alert(count===3?'Three attendance checks have been recorded. Please either take the fourth roll call before finalising, or contact Admin if one register was created in error.':'No completed lecture register is available to finalise.');
