@@ -40,7 +40,7 @@ async function recoverQrSession(){
   let ses=visibleSessions().find(x=>x.id===rollSessionId);
   if(!ses)return;
   S.selected=rollSessionId;S.rollSession=rollSessionId;
-  S.qrActive={sessionId:q.id,sessionKey:q.session_key,rollSessionId,sessionType:ses.type,token:q.token,windowExpiresAt:q.window_expires_at,tokenExpiresAt:q.token_expires_at,checkedIn:q.checked_in||0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
+  S.qrActive={sessionId:q.id,sessionKey:q.session_key,rollSessionId,sessionType:ses.type,token:q.token,windowExpiresAt:q.window_expires_at,tokenExpiresAt:q.token_expires_at,checkedIn:q.checked_in||0,nextRotateAt:Date.now()+60000,nextStatusAt:Date.now()+5000,finishing:false};
   if(q.status==='expired'||Date.now()>=new Date(q.window_expires_at).getTime()){
     S.qrActive.finishing=true;
     await finishQrWindow(true);
@@ -77,7 +77,7 @@ async function startQrCheckin(){
   if(!confirm('Start a fresh 5-minute rotating QR for '+courseLabel(ses.course)+' · '+what+'?\n\n'+(String(ses.type||'').toLowerCase()==='practical'?'Students will enter matric number + Group A/B + surname.':'Students will enter matric number + surname.')+' After 5 minutes, only students who did not check in will appear for manual roll call.'))return;
   try{
     let b=await qrPost({action:'create',session_key:key(ses),course:ses.course,session_type:ses.type,session_date:iso(),lecturer,venue:ses.venue||''});
-    S.qrActive={sessionId:b.session_id,sessionKey:key(ses),rollSessionId:ses.id,sessionType:ses.type,token:b.token,windowExpiresAt:b.window_expires_at,tokenExpiresAt:b.token_expires_at,checkedIn:0,nextRotateAt:Date.now()+50000,nextStatusAt:Date.now()+5000,finishing:false};
+    S.qrActive={sessionId:b.session_id,sessionKey:key(ses),rollSessionId:ses.id,sessionType:ses.type,token:b.token,windowExpiresAt:b.window_expires_at,tokenExpiresAt:b.token_expires_at,checkedIn:0,nextRotateAt:Date.now()+60000,nextStatusAt:Date.now()+5000,finishing:false};
     S.qrManual=null;S.rollIndex=0;
     startQrTicker();renderRoll();
   }catch(e){alert('Could not start QR attendance: '+e.message)}
@@ -100,7 +100,7 @@ async function qrTick(){
       qrBusy=true;
       let b=await qrPost({action:'rotate',session_id:q.sessionId});
       q.token=b.token;q.tokenExpiresAt=b.token_expires_at;q.checkedIn=b.checked_in??q.checkedIn;
-      q.nextRotateAt=Date.now()+50000;q.nextStatusAt=Date.now()+5000;
+      q.nextRotateAt=Date.now()+60000;q.nextStatusAt=Date.now()+5000;
       renderQrCode();updateQrStatusUi();
     }else if(Date.now()>=q.nextStatusAt){
       qrBusy=true;
